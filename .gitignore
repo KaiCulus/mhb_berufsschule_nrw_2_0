@@ -1,0 +1,14 @@
+# Vue.js
+node_modules/
+dist/
+*.local
+
+# PHP
+vendor/
+.env
+*.log
+*.sql
+
+# IDE/Editor
+.idea/
+.vscode/
