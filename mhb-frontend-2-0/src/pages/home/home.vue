@@ -22,10 +22,16 @@
       Zum Loginbereich
     </button>
   </div>
+  <!--TODO: Später entfernen-->
+  <div id="testScrolling">
+    Muss später entfernt werden
+  </div>
 </template>
 
 <style scoped>
-
+  #testScrolling{
+    min-height: 150vh;
+  }
   
   
 </style>

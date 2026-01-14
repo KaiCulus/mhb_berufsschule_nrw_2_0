@@ -34,11 +34,13 @@
 
 <template>
   <div id="Mainheader" ref="header">
-    <div class="flexcontainer">
-      <HeaderLeft />
-      <div class="noStructureChange" v-if="isLoggedIn">
-        <HeaderMiddle />
-        <HeaderRight />
+    <div class="header-wrapper">
+      <div class="flexcontainer">
+        <HeaderLeft />
+        <div class="noStructureChange" v-if="isLoggedIn">
+          <HeaderMiddle />
+          <HeaderRight />
+        </div>
       </div>
     </div>
   </div>
@@ -57,8 +59,12 @@
     transition: background-color 0.3s ease;
   }
 
+  .header-wrapper{
+    position: relative;
+  }
+
   #Mainheader.scrolled {
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.1);
   }
 
   @media (max-width: 768px) {
