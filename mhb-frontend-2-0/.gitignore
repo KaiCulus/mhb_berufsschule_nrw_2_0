@@ -34,3 +34,15 @@ coverage
 
 # Vitest
 __screenshots__/
+
+# Vue.js
+node_modules/
+dist/
+*.local
+.env
+.env.local
+.env.*.local
+
+# Build-Tools
+coverage/
+*.map

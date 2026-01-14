@@ -1,0 +1,12 @@
+# PHP
+vendor/
+.env
+.env.test
+.env*.local
+
+# PHPStorm/Cache
+.phpstorm.meta.php
+/.php-cs-fixer.cache
+
+# Tests
+phpunit.xml
