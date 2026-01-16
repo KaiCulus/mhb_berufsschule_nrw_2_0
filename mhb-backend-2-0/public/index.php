@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 session_start();
 
 // Lade .env
@@ -15,6 +15,7 @@ $dotenv->required([
 // Debug: Logge die aufgerufene Route TODO:Entfernen
 error_log("Aufgerufene Route: " . $_SERVER['REQUEST_URI']);
 error_log("Methode: " . $_SERVER['REQUEST_METHOD']);
+// Temporär für Debugging
 
 // Simple Router (später durch z. B. FastRoute ersetzen)
 $route = $_SERVER['REQUEST_URI'];
@@ -36,13 +37,7 @@ try {
 } catch (\Exception $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Interner Serverfehler: ' . $e->getMessage()]);
-} catch (\Kai\MhbBackend20\Auth\Exceptions\OAuthException $e) {
-    http_response_code($e->getCode());
-    echo json_encode(['error' => $e->getMessage()]);
 } catch (\Dotenv\Exception\ValidationException $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Serverfehler: Konfiguration unvollständig']);
-} catch (\Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Interner Serverfehler']);
-}
+} 

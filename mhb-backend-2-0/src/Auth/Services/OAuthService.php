@@ -12,27 +12,27 @@ class OAuthService {
      * @return array Dekodierte Nutzerdaten (email, name, etc.)
      * @throws OAuthException
      */
-    public function validateIdToken(string $idToken): array {
-        // 1. Microsofts öffentlichen Schlüssel holen (gecacht für Performance)
-        $publicKey = $this->getMicrosoftPublicKey();
-
-        // 2. Token dekodieren und validieren
+    public function validateIdToken(string $idToken): array
+    {
         try {
+            $publicKey = $this->getMicrosoftPublicKey();
             $decoded = JWT::decode($idToken, new Key($publicKey, 'RS256'));
+        } catch (\Firebase\JWT\ExpiredException $e) {
+            throw new OAuthException('Invalid token claims: Token expired', 401);
         } catch (\Exception $e) {
-            throw new OAuthException('Invalid ID token: ' . $e->getMessage());
+            throw new OAuthException('Invalid token claims: ' . $e->getMessage(), 401);
         }
 
-        // 3. Claims prüfen
+        // ✅ Prüfe die Claims (iss, aud, exp)
         if (
-            $decoded->iss !== "https://login.microsoftonline.com/{$_ENV['MHB_BE_MSAL_TENANT_ID']}/v2.0" ||
+            strpos($decoded->iss, $_ENV['MHB_BE_MSAL_TENANT_ID']) === false ||
             $decoded->aud !== $_ENV['MHB_BE_MSAL_CLIENT_ID'] ||
             $decoded->exp < time()
         ) {
-            throw new OAuthException('Invalid token claims');
+            throw new OAuthException('Invalid token claims', 401);
         }
 
-        return (array) $decoded;
+        return (array)$decoded;
     }
 
     /**
