@@ -78,6 +78,31 @@ class OAuthController {
             // 4. Nutzerdaten validieren (via ID Token)
             $userData = $this->oauthService->validateIdToken($token->getValues()['id_token']);
 
+            //Email nutzen, um DB Eintrag für Nutzer anzulegen/ Die in der DB enthaltene Nutzer ID herauszufinden, um diese später für DB_Anfragen bereitzuhalten.
+
+            $email = $userData['email'] ?? $userData['upn'];
+            $db = \Kai\MhbBackend20\Database\DB::getConnection();
+
+            // Suchen via Hash -> Sonst neuen Eintrag anlegen.
+            $emailHash = hash('sha256', $email);
+            $stmt = $db->prepare("SELECT id FROM users WHERE email_hash = ?");
+            $stmt->execute([$emailHash]);
+            $userRecord = $stmt->fetch();
+
+            if ($userRecord) {
+                $dbId = $userRecord['id'];
+            } else {
+                // Neu anlegen mit Verschlüsselung 
+                $encryptionKey = $_ENV['APP_ENCRYPTION_KEY'];
+                $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
+                $encrypted = openssl_encrypt($email, 'aes-256-cbc', $encryptionKey, 0, $iv);
+                $storageValue = base64_encode($iv . $encrypted);
+
+                $ins = $db->prepare("INSERT INTO users (email_hash, email_encrypted) VALUES (?, ?)");
+                $ins->execute([$emailHash, $storageValue]);
+                $dbId = $db->lastInsertId();
+            }
+
             // 5. Optional: Daten in Session speichern (für spätere Backend-Calls)
             $_SESSION['user'] = $userData;
             $_SESSION['access_token'] = $token->getToken();
@@ -86,6 +111,8 @@ class OAuthController {
             // Wir kodieren die User-Daten als JSON, damit sie sauber übertragen werden
             $queryParams = http_build_query([
                 'access_token' => $token->getToken(),
+                'id_token' => $token->getValues()['id_token'],
+                'db_id' => $dbId,
                 'user' => json_encode($userData)
             ]);
 
@@ -108,4 +135,39 @@ class OAuthController {
             exit;
         }
     }
+
+    /**
+     * Beendet die lokale Session und leitet zum Microsoft-Logout weiter.
+     */
+    public function logout(): void
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        // 1. Lokale PHP-Session zerstören
+        $_SESSION = [];
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params["path"], $params["domain"],
+                $params["secure"], $params["httponly"]
+            );
+        }
+        session_destroy();
+
+        // 2. Microsoft Logout URL zusammenbauen
+        // post_logout_redirect_uri ist die URL, zu der MS den User nach dem Logout zurückschickt
+        $tenantId = $_ENV['MHB_BE_MSAL_TENANT_ID'];
+        $postLogoutRedirect = $_ENV['MHB_FRONTEND_URL']; 
+        
+        $msLogoutUrl = "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/logout?" . http_build_query([
+            'post_logout_redirect_uri' => $postLogoutRedirect
+        ]);
+
+        // 3. Umleiten zu Microsoft
+        header('Location: ' . $msLogoutUrl);
+        exit;
+    }
+
 }

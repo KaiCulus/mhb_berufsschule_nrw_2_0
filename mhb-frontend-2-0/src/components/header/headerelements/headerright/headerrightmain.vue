@@ -1,24 +1,17 @@
 <script setup>
-  import { ref } from 'vue'
   import { useAuthStore } from '@/stores/authentification/auth'
   import { useRouter } from 'vue-router'
 
+   import LogoutButton from '@/components/LoginStatus/LogoutButton.vue'
+
   const auth = useAuthStore()
   const router = useRouter()  
-
-  const emoji = ref('😊')
-
-  //TODO: unbedingt ändern
-  const logoutmethode = () => {
-    auth.logout()
-    router.push('/')
-  }
   
 </script>
 
 <template>
-  <div id="header-right" v-on:click="logoutmethode">
-    <span>{{ emoji }}</span>
+  <div>
+    <LogoutButton />
   </div>
 </template>
 

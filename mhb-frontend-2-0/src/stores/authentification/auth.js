@@ -1,43 +1,36 @@
-// src/stores/auth.js
 import { defineStore } from 'pinia';
-import router from '@/router'; // Stelle sicher, dass du den Router importierst
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
+    dbId: null,
     isLoggedIn: false,
-    accessToken: null,
+    accessToken: null, // Für Microsoft Graph
+    idToken: null,     // Für DEIN PHP-Backend 
   }),
 
   actions: {
-    /**
-     * Startet den Login-Prozess.
-     * Leitet einfach nur an das PHP-Backend weiter.
-     */
     async login() {
-      // Wir leiten den Browser komplett um, damit PHP die Session und Cookies setzen kann
       window.location.href = 'https://localhost:443/oauth/login';
     },
 
-    /**
-     * Wird aufgerufen, wenn die App lädt (z.B. im Dashboard).
-     * Prüft, ob das Backend uns Daten per URL-Parameter zurückgegeben hat.
-     */
     async checkAuthOnLoad() {
       const params = new URLSearchParams(window.location.search);
-      const token = params.get('access_token');
+      const accessToken = params.get('access_token');
+      const idToken = params.get('id_token'); // NEU
+      const dbId = params.get('db_id');       // NEU
       const userRaw = params.get('user');
 
-      // Fall A: Wir kommen gerade frisch vom Login zurück
-      if (token && userRaw) {
+      if (accessToken && idToken && userRaw) {
         try {
-          this.accessToken = token;
-          this.user = JSON.parse(decodeURIComponent(userRaw)); // URL-Encoding beachten
+          this.accessToken = accessToken;
+          this.idToken = idToken;
+          this.dbId = dbId;
+          this.user = JSON.parse(decodeURIComponent(userRaw));
           this.isLoggedIn = true;
 
-          // URL bereinigen (Token nicht in der Browser-Leiste stehen lassen)
+          // URL bereinigen
           window.history.replaceState({}, document.title, window.location.pathname);
-          
           return true;
         } catch (e) {
           console.error('Fehler beim Parsen der Login-Daten:', e);
@@ -45,8 +38,8 @@ export const useAuthStore = defineStore('auth', {
         }
       }
 
-      // Fall B: Wir haben bereits Daten im LocalStorage (durch persist)
-      if (this.accessToken && this.user) {
+      // Prüfen, ob wir bereits durch "persist" Daten haben
+      if (this.idToken && this.user) {
          this.isLoggedIn = true;
          return true;
       }
@@ -55,56 +48,33 @@ export const useAuthStore = defineStore('auth', {
     },
 
     /**
-     * Ruft Nutzerdaten von Microsoft Graph ab.
+     * Hilfsmethode für API-Calls an DEIN Backend
      */
+    getAuthHeader() {
+      if (!this.idToken) throw new Error('Nicht authentifiziert');
+      return { 'Authorization': `Bearer ${this.idToken}` };
+    },
+
     async fetchUserData() {
       if (!this.accessToken) return null;
-      
       const response = await fetch('https://graph.microsoft.com/v1.0/me', {
         headers: { Authorization: `Bearer ${this.accessToken}` },
       });
-      
-      if (!response.ok) {
-        // Wenn Token ungültig (z.B. abgelaufen), ausloggen
-        if (response.status === 401) this.logout();
-        throw new Error(`Graph API error: ${response.status}`);
-      }
+      if (response.status === 401) this.logout();
       return response.json();
     },
 
-    /**
-     * Meldet den Nutzer ab.
-     * Optional: Rufe auch einen Backend-Logout-Endpoint auf, um die PHP-Session zu killen.
-     */
     async logout() {
-      // 1. Lokalen State leeren
+      // Lokalen State sofort leeren
       this.user = null;
+      this.dbId = null;
       this.isLoggedIn = false;
       this.accessToken = null;
+      this.idToken = null;
 
-      // 2. Optional: Backend benachrichtigen (Best Practice)
-      // await fetch('https://localhost:443/oauth/logout');
-
-      // 3. Zur Startseite
-      router.push('/');
-    },
-
-    /**
-     * Gibt das aktuelle Token zurück.
-     * Da wir kein Silent Renew im Frontend mehr haben (MSAL ist weg),
-     * müssen wir bei Ablauf den User neu zum Login schicken.
-     */
-    async getAccessToken() {
-      if (!this.accessToken) {
-         // Kein Token da? Login erzwingen
-         this.logout(); 
-         throw new Error('No access token available');
-      }
-      
-      // Hier könnte man noch prüfen, ob das Token abgelaufen ist (via jwt-decode)
-      // Wenn abgelaufen -> this.login() aufrufen.
-      
-      return this.accessToken;
+      // Das Pinia-Persist-Plugin löscht nun automatisch den LocalStorage.
+      // Dann Umleitung zum Backend-Logout (welches zu MS weiterleitet)
+      window.location.href = "https://localhost:443/oauth/logout";
     },
   },
 
@@ -113,8 +83,8 @@ export const useAuthStore = defineStore('auth', {
     strategies: [
       {
         storage: localStorage,
-        // Wir speichern jetzt auch das Token, da wir es nicht mehr "silent" im Hintergrund holen können
-        paths: ['user', 'accessToken', 'isLoggedIn'], 
+        // TODO: Überlegen, ob man das Access Token reinnimmt. Vorteil: derzeit muss sich der User immer wenn er mit Graph kommuniziert, muss er sich neu anmelden, sobald er die Seite neu lädt.
+        paths: ['user', 'dbId', 'isLoggedIn', 'idToken'], 
       },
     ],
   },

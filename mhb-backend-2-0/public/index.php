@@ -1,22 +1,16 @@
 <?php
 /**
  * index.php - Einstiegspunkt für das Backend
- * Vollständig überarbeitete Version mit robustem Routing
  */
 
-// 1. Autoloader und Basiskonfiguration
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// 2. Session-Konfiguration
+// 1. Basiskonfiguration laden
+loadEnvironmentConfiguration();
 configureSecureSession();
-
-// 3. CORS-Header
 setupCorsHeaders();
 
-// 4. Umgebungskonfiguration
-loadEnvironmentConfiguration();
-
-// 5. Anfrage verarbeiten
+// 2. Anfrage verarbeiten
 handleRequest();
 
 /**
@@ -24,9 +18,9 @@ handleRequest();
  */
 function configureSecureSession(): void
 {
+    // Wichtig: Muss vor session_start() stehen
     ini_set('session.cookie_samesite', 'None');
     ini_set('session.cookie_secure', 'true');
-    ini_set('session.cookie_domain', 'localhost');
     ini_set('session.cookie_httponly', 'true');
 
     session_set_cookie_params([
@@ -38,35 +32,23 @@ function configureSecureSession(): void
         'samesite' => 'None'
     ]);
 
-    session_start();
-
-    if (!isset($_COOKIE['PHPSESSID'])) {
-        setcookie(
-            'PHPSESSID',
-            session_id(),
-            [
-                'expires' => time() + 86400,
-                'path' => '/',
-                'domain' => 'localhost',
-                'secure' => true,
-                'httponly' => true,
-                'samesite' => 'None'
-            ]
-        );
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
     }
-
-    error_log('Session initialized. ID: ' . session_id());
 }
 
 /**
- * Setzt die CORS-Header
+ * Setzt die CORS-Header für Vue-Frontend Kommunikation
  */
 function setupCorsHeaders(): void
 {
-    header('Access-Control-Allow-Origin: http://localhost:5173');
+    // Nutze die URL aus der .env falls vorhanden, sonst Fallback auf localhost:5173
+    $allowedOrigin = $_ENV['MHB_FRONTEND_URL'] ?? 'http://localhost:5173';
+    
+    header("Access-Control-Allow-Origin: $allowedOrigin");
     header('Access-Control-Allow-Credentials: true');
-    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
         http_response_code(200);
@@ -91,159 +73,124 @@ function loadEnvironmentConfiguration(): void
 }
 
 /**
- * Verarbeitet die Anfrage
+ * Zentrales Routing "Gehirn"
  */
 function handleRequest(): void
 {
     $method = $_SERVER['REQUEST_METHOD'];
     $path = getRequestPath();
 
-    error_log("Full REQUEST_URI: " . $_SERVER['REQUEST_URI']);
-    error_log("Parsed path: " . $path);
-    error_log("Request method: " . $method);
-
     try {
-        // Routing-Tabelle
+        /**
+         * ROUTING TABELLE
+         * Hier kannst du einfach neue Endpunkte hinzufügen.
+         */
         $routes = [
-            '' => ['GET' => 'handleRoot'],
-            'oauth/login' => ['GET' => 'handleOAuthLogin'],
-            'oauth/callback' => ['GET' => 'handleOAuthCallback']
+            // Säule 1: Auth
+            ''               => ['GET' => 'handleRoot'],
+            'oauth/login'    => ['GET' => 'handleOAuthLogin'],
+            'oauth/callback' => ['GET' => 'handleOAuthCallback'],
+            'oauth/logout'   => ['GET' => 'handleOAuthLogout'],
+
+            // Säule 2 & 3: Beispiel für geschützte API (Graph + DB)
+            'api/user/profile' => ['GET' => 'handleUserProfile'],
+
+            //Test API TODO: Später entfernen
+            'api/test-letter' => ['GET' => 'handleTestLetter'],
         ];
 
-        // Prüfe ob Route existiert
-        if (!array_key_exists($path, $routes)) {
-            error_log("Route not found: " . $path);
+        if (!isset($routes[$path])) {
             handleNotFound();
             return;
         }
 
-        // Prüfe ob Methode unterstützt wird
-        if (!array_key_exists($method, $routes[$path])) {
-            error_log("Method not allowed: " . $method . " for path: " . $path);
+        if (!isset($routes[$path][$method])) {
             handleMethodNotAllowed();
             return;
         }
 
-        // Führe den entsprechenden Handler aus
         $handler = $routes[$path][$method];
-        $handler();
+        
+        // Wenn der Handler ein String ist, rufen wir die Funktion auf
+        if (is_string($handler)) {
+            $handler();
+        } 
     } catch (Exception $e) {
         handleError($e);
     }
 }
 
 /**
- * Extrahiere den korrekten Pfad aus der Anfrage
+ * BEISPIEL: Ein kombinierter Handler für Auth, Graph und DB
+ */
+function handleUserProfile(): void 
+{
+    // 1. Auth-Säule: Token validieren
+    $userData = \Kai\MhbBackend20\Auth\Middleware\AuthMiddleware::check();
+    
+    // 2. Graph-Säule: (Optional) Weitere Daten von MS holen
+    // $graph = new \Kai\MhbBackend20\Graph\GraphClient($userData['access_token']);
+    
+    // 3. DB-Säule: Verbindung nutzen
+    // $db = \Kai\MhbBackend20\Database\DB::getConnection();
+
+    header('Content-Type: application/json');
+    echo json_encode([
+        'status' => 'success',
+        'user' => $userData
+    ]);
+}
+
+/**
+ * Handler für die Auth-Säule
+ */
+function handleOAuthLogin(): void
+{
+    $controller = new \Kai\MhbBackend20\Auth\Controllers\OAuthController();
+    $controller->redirectToOAuth();
+}
+
+function handleOAuthCallback(): void
+{
+    $controller = new \Kai\MhbBackend20\Auth\Controllers\OAuthController();
+    $controller->handleCallback();
+}
+
+function handleOAuthLogout(): void
+{
+    $controller = new \Kai\MhbBackend20\Auth\Controllers\OAuthController();
+    $controller->logout();
+}
+
+//TODO: handleTestLetter Später entfernen
+function handleTestLetter(): void
+{
+    $controller = new \Kai\MhbBackend20\Api\Controllers\TestController();
+    $controller->getThirdLetter();
+}
+
+/**
+ * Hilfsfunktionen
  */
 function getRequestPath(): string
 {
-    // Fall 1: Pfad kommt aus .htaccess Umleitung
-    if (isset($_GET['path'])) {
-        return trim($_GET['path'], '/');
-    }
-
-    // Fall 2: Direktzugriff auf index.php
     $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     $path = trim($path, '/');
-
-    // Entferne "index.php" falls vorhanden
+    
+    // index.php aus dem Pfad entfernen, falls sie direkt aufgerufen wird
     if (strpos($path, 'index.php') === 0) {
         $path = substr($path, strlen('index.php'));
         $path = trim($path, '/');
     }
 
-    // Gib leeren String für Root zurück
-    return $path === '' ? '' : $path;
+    return $path;
 }
 
-/**
- * Handhabung der Root-Route
- */
-function handleRoot(): void
-{
-    echo "Backend is running. Try /oauth/login";
-}
-
-/**
- * Handhabung des OAuth-Logins
- */
-function handleOAuthLogin(): void
-{
-    try {
-        error_log("Handling OAuth login request");
-        $controller = new \Kai\MhbBackend20\Auth\Controllers\OAuthController();
-        $controller->redirectToOAuth();
-    } catch (\Exception $e) {
-        error_log("Full error details: " . $e->getMessage());
-        error_log("Error trace: " . $e->getTraceAsString());
-
-        http_response_code(500);
-        echo json_encode([
-            'error' => 'Authentication error',
-            'message' => $e->getMessage(),
-            'details' => $e->getTraceAsString()
-        ]);
-    }
-}
-
-/**
- * Handhabung des OAuth-Callbacks
- */
-function handleOAuthCallback(): void
-{
-    try {
-        error_log("Handling OAuth callback request");
-        $controller = new \Kai\MhbBackend20\Auth\Controllers\OAuthController();
-        $controller->handleCallback();
-    } catch (\Exception $e) {
-        error_log("Full error details: " . $e->getMessage());
-        error_log("Error trace: " . $e->getTraceAsString());
-
-        http_response_code(500);
-        echo json_encode([
-            'error' => 'Authentication error',
-            'message' => $e->getMessage(),
-            'details' => $e->getTraceAsString()
-        ]);
-    }
-}
-
-/**
- * Fehlerbehandlung für nicht gefundene Routen
- */
-function handleNotFound(): void
-{
-    http_response_code(404);
-    echo json_encode([
-        'error' => 'Route not found',
-        'available_routes' => [
-            '/',
-            '/oauth/login',
-            '/oauth/callback'
-        ]
-    ]);
-}
-
-/**
- * Fehlerbehandlung für nicht erlaubte Methoden
- */
-function handleMethodNotAllowed(): void
-{
-    http_response_code(405);
-    echo json_encode([
-        'error' => 'Method not allowed',
-        'message' => 'This endpoint only supports GET requests'
-    ]);
-}
-
-/**
- * Allgemeine Fehlerbehandlung
- */
-function handleError(Exception $e): void
-{
+function handleRoot(): void { echo json_encode(['message' => 'MHB Backend API']); }
+function handleNotFound(): void { http_response_code(404); echo json_encode(['error' => 'Not Found']); }
+function handleMethodNotAllowed(): void { http_response_code(405); echo json_encode(['error' => 'Method Not Allowed']); }
+function handleError(Exception $e): void {
+    error_log($e->getMessage());
     http_response_code(500);
-    echo json_encode([
-        'error' => 'Internal server error',
-        'message' => $e->getMessage()
-    ]);
+    echo json_encode(['error' => 'Internal Server Error', 'message' => $e->getMessage()]);
 }
