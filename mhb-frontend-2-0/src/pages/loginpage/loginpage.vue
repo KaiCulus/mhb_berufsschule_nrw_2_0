@@ -1,6 +1,7 @@
 <script setup>
   import { useAuthStore } from '@/stores/authentification/auth'
   import { useRouter } from 'vue-router'
+  import LoginButton from '@/components/LoginStatus/LoginButton.vue'
 
   const auth = useAuthStore()
   const router = useRouter()  
@@ -15,9 +16,7 @@
 
 <template>
   <div>
-    <button v-on:click="loginmethode">
-      Hier einloggen
-    </button>
+    <LoginButton />
   </div>
 </template>
 

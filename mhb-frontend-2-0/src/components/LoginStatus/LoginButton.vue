@@ -1,11 +1,23 @@
 <script setup>
-    import { useAuthStore } from '@/stores/auth';
-    const auth = useAuthStore();
-    const login = () => auth.login();
+  import { useAuthStore } from '@/stores/authentification/auth';
+  import { storeToRefs } from 'pinia';
+
+  const auth = useAuthStore();
+  const { isLoggedIn, isLoading } = storeToRefs(auth);
+
+  const login = async () => {
+    try {
+      await auth.login();
+    } catch (error) {
+      alert('Anmeldung fehlgeschlagen. Bitte versuche es erneut.');
+    }
+  };
 </script>
 
 <template>
-  <button @click="login">Mit Microsoft 365 anmelden</button>
+  <button @click="login" :disabled="isLoading">
+    {{ isLoading ? 'Lädt...' : 'Mit Microsoft 365 anmelden' }}
+  </button>
 </template>
 
 

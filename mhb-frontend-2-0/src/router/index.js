@@ -39,16 +39,30 @@ const router = createRouter({
       component: () => import('@/pages/ticketpage/ticketpage.vue'),
       meta: {requiresAuth: true}
     },
+    {
+      path: '/oauth/callback',
+      beforeEnter: async (to, from, next) => {
+        const auth = useAuthStore();
+        await auth.initializeFromCallback();
+        next('/dashboard'); // Weiterleitung nach dem Login
+      },
+    },
   ]
 })
 
-router.beforeEach((to, from, next) => {
-  const auth = useAuthStore()
-  if (to.meta.requiresAuth && !auth.isLoggedIn) {
-    next('/login') // Weiterleitung zur Login-Seite
+// GLOBALER GUARD
+router.beforeEach(async (to, from, next) => {
+  const authStore = useAuthStore();
+
+  // 1. Prüfen, ob wir gerade vom OAuth-Callback kommen (URL-Params checken)
+  await authStore.checkAuthOnLoad();
+
+  // 2. Route Protection
+  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+    next('/'); // Nicht eingeloggt -> Zurück zum Login
   } else {
-    next() // Route freigeben
+    next(); // Alles ok
   }
-})
+});
 
 export default router

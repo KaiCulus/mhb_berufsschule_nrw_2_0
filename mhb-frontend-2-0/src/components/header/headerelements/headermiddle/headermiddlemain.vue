@@ -1,6 +1,5 @@
 <script setup>
-  import { ref } from 'vue';
-  import { onMounted, onUnmounted } from 'vue';
+  import { ref, onMounted, onUnmounted  } from 'vue';
 
   import MenuEntry from './headermiddleSubcomponents/menuEntry.vue';
 
@@ -42,7 +41,6 @@
     <span>☰</span>
   </div>
   <div v-if="isVisible" id="mainMenu">
-    <!--TODO: Hier weiterarbeiten. MenueEntry.vue mit props einfügen. CSS Styling anpassen.-->
     <div class="dropdownmenu-main">
       <MenuEntry
         v-for="(entry, index) in menuEntries"

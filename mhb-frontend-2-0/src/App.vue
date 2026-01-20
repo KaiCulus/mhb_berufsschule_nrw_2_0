@@ -6,9 +6,9 @@
 
   //Auth Store direkt initialisieren
   const auth = useAuthStore();
-  onMounted(() => {
-    auth.initialize();
-  });
+  /*onMounted(() => {
+    auth.initializeFromCallback();
+  });*/
   
 </script>
 

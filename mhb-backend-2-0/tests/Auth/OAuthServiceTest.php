@@ -172,4 +172,52 @@ class OAuthServiceTest extends TestCase
         $service = new OAuthService();
         $service->validateIdToken('invalid.issuer.token');
     }
+
+    public function testHandleCallbackThrowsOnMissingCode()
+    {
+        $_GET['state'] = 'test_state';
+        $_SESSION['oauth2state'] = 'test_state';
+        // ✅ Kein $_GET['code'] gesetzt
+
+        $controller = new OAuthController();
+        $this->expectException(OAuthException::class);
+        $this->expectExceptionMessage('Authorization code missing');
+        $this->expectExceptionCode(400);
+        $controller->handleCallback();
+    }
+
+    public function testHandleCallbackWithValidState()
+    {
+        $_GET['state'] = 'test_state';
+        $_GET['code'] = 'test_code';
+        $_SESSION['oauth2state'] = 'test_state';
+
+        $mockProvider = $this->createMock(GenericProvider::class);
+        $mockAccessToken = $this->createMock(\League\OAuth2\Client\Token\AccessToken::class);
+        $mockAccessToken->method('getToken')->willReturn('access_token_123');
+        $mockAccessToken->method('getRefreshToken')->willReturn(null); // ✅ Null-sicher
+        $mockAccessToken->method('getValues')->willReturn(['id_token' => 'id_token_789']);
+
+        $mockProvider->expects($this->once())
+            ->method('getAccessToken')
+            ->with('authorization_code', ['code' => 'test_code'])
+            ->willReturn($mockAccessToken);
+
+        $mockService = $this->createMock(OAuthService::class);
+        $mockService->expects($this->once())
+            ->method('validateIdToken')
+            ->with('id_token_789')
+            ->willReturn(['name' => 'Test Nutzer', 'email' => 'test@example.com']);
+
+        $controller = new OAuthController($mockProvider, $mockService);
+        $result = $controller->handleCallback();
+
+        $this->assertEquals([
+            'access_token' => 'access_token_123',
+            'refresh_token' => null, // ✅ Null-sicher
+            'user' => ['name' => 'Test Nutzer', 'email' => 'test@example.com']
+        ], $result);
+    }
+
+
 }

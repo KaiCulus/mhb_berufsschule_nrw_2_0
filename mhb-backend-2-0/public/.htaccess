@@ -1,0 +1,15 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Fall 1: Direkter Aufruf von index.php
+    RewriteRule ^index\.php$ - [L]
+
+    # Fall 2: Alle anderen Anfragen an index.php weiterleiten
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php?path=$1 [L,QSA]
+</IfModule>
+
+
+
