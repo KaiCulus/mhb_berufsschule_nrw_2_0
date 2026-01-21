@@ -1,0 +1,45 @@
+.
+├── composer.json
+├── composer.lock
+├── config
+│   ├── graph.php
+│   ├── microsoft_keys.json
+│   └── oauth.php
+├── phpunit.xml
+├── public
+│   └── index.php
+├── src
+│   ├── Api
+│   │   └── Controllers
+│   │       └── TestController.php
+│   ├── Auth
+│   │   ├── Controllers
+│   │   │   └── OAuthController.php
+│   │   ├── Exceptions
+│   │   │   └── OAuthException.php
+│   │   ├── Middleware
+│   │   │   └── AuthMiddleware.php
+│   │   ├── Models
+│   │   └── Services
+│   │       └── OAuthService.php
+│   ├── Common
+│   │   └── Cipher.php
+│   ├── Database
+│   │   ├── DB.php
+│   │   └── Repositories
+│   └── Graph
+│       ├── Controllers
+│       │   └── GraphSyncController.php
+│       ├── GraphClient.php
+│       └── Services
+│           └── MSFolderSyncService.php
+├── structure.txt
+└── tests
+    ├── Auth
+    │   ├── OAuthControllerTest.php
+    │   └── OAuthServiceTest.php
+    └── Graph
+        ├── folderSyncServiceTest.php
+        └── sitesReadAllTest.php
+
+21 directories, 22 files

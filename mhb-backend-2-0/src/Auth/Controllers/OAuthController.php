@@ -81,7 +81,7 @@ class OAuthController {
             //Email nutzen, um DB Eintrag für Nutzer anzulegen/ Die in der DB enthaltene Nutzer ID herauszufinden, um diese später für DB_Anfragen bereitzuhalten.
 
             $email = $userData['email'] ?? $userData['upn'];
-            $db = \Kai\MhbBackend20\Database\DB::getConnection();
+            $db = \Kai\MhbBackend20\Database\DB::getInstance()->getConnection();
 
             // Suchen via Hash -> Sonst neuen Eintrag anlegen.
             $emailHash = hash('sha256', $email);
@@ -106,6 +106,22 @@ class OAuthController {
             // 5. Optional: Daten in Session speichern (für spätere Backend-Calls)
             $_SESSION['user'] = $userData;
             $_SESSION['access_token'] = $token->getToken();
+
+            // NEU: Gruppen abrufen für die spätere Admin-Prüfung
+            try {
+                //TODO: Eventuell graphClient konfigurieren falls wir später nochmal live von der API anfragen wollen.
+                //$graphClient = new \Kai\MhbBackend20\Graph\GraphClient();
+                // Wir nutzen den soeben erhaltenen Access Token für den Client
+                // Falls dein GraphClient das Token selbst via Client Credentials holt, 
+                // müssen wir hier unterscheiden: Wir brauchen die Gruppen des AKTUELLEN Users.
+                
+                // Einfachste Methode für den Anfang: Gruppen aus dem ID-Token (falls konfiguriert)
+                $_SESSION['user_groups'] = $userData['groups'] ?? [];
+                
+            } catch (\Exception $e) {
+                error_log("Gruppen konnten nicht geladen werden: " . $e->getMessage());
+                $_SESSION['user_groups'] = [];
+            }
             
             // 6. Redirect zum Frontend MIT Daten in der URL
             // Wir kodieren die User-Daten als JSON, damit sie sauber übertragen werden

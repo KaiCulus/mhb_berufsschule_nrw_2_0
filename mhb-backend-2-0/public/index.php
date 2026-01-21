@@ -18,18 +18,16 @@ handleRequest();
  */
 function configureSecureSession(): void
 {
-    // Wichtig: Muss vor session_start() stehen
-    ini_set('session.cookie_samesite', 'None');
-    ini_set('session.cookie_secure', 'true');
-    ini_set('session.cookie_httponly', 'true');
+    // Hinweis: domain sollte im Prod-Betrieb dynamisch aus .env kommen
+    $domain = parse_url($_ENV['MHB_FRONTEND_URL'] ?? 'http://localhost', PHP_URL_HOST);
 
     session_set_cookie_params([
         'lifetime' => 86400,
         'path' => '/',
-        'domain' => 'localhost',
+        'domain' => $domain, 
         'secure' => true,
         'httponly' => true,
-        'samesite' => 'None'
+        'samesite' => 'None' // Wichtig für Cross-Origin (Lokal HTTPS erforderlich!)
     ]);
 
     if (session_status() === PHP_SESSION_NONE) {
@@ -42,7 +40,6 @@ function configureSecureSession(): void
  */
 function setupCorsHeaders(): void
 {
-    // Nutze die URL aus der .env falls vorhanden, sonst Fallback auf localhost:5173
     $allowedOrigin = $_ENV['MHB_FRONTEND_URL'] ?? 'http://localhost:5173';
     
     header("Access-Control-Allow-Origin: $allowedOrigin");
@@ -69,6 +66,7 @@ function loadEnvironmentConfiguration(): void
         'MHB_BE_MSAL_CLIENT_SECRET_VALUE',
         'MHB_BE_MSAL_REDIRECT_URI',
         'MHB_BE_MSAL_TENANT_ID',
+        'MHB_BE_MSAL_ADMIN_VERWALTUNG' // Neu für Rollen-Check
     ]);
 }
 
@@ -83,90 +81,82 @@ function handleRequest(): void
     try {
         /**
          * ROUTING TABELLE
-         * Hier kannst du einfach neue Endpunkte hinzufügen.
          */
         $routes = [
-            // Säule 1: Auth
-            ''               => ['GET' => 'handleRoot'],
-            'oauth/login'    => ['GET' => 'handleOAuthLogin'],
-            'oauth/callback' => ['GET' => 'handleOAuthCallback'],
-            'oauth/logout'   => ['GET' => 'handleOAuthLogout'],
-
-            // Säule 2 & 3: Beispiel für geschützte API (Graph + DB)
-            'api/user/profile' => ['GET' => 'handleUserProfile'],
-
-            //Test API TODO: Später entfernen
-            'api/test-letter' => ['GET' => 'handleTestLetter'],
+            'oauth/login'             => ['GET'  => 'handleOAuthLogin'],
+            'oauth/callback'          => ['GET'  => 'handleOAuthCallback'],
+            'oauth/logout'            => ['GET'  => 'handleOAuthLogout'],
+            'api/sync/get-permissions' => ['GET'  => 'handleGetPermissions'],
+            'api/user/profile'        => ['GET'  => 'handleUserProfile'],
+            'api/test-letter'         => ['GET'  => 'handleTestLetter'],
         ];
 
-        if (!isset($routes[$path])) {
-            handleNotFound();
-            return;
-        }
-
-        if (!isset($routes[$path][$method])) {
-            handleMethodNotAllowed();
-            return;
-        }
-
-        $handler = $routes[$path][$method];
-        
-        // Wenn der Handler ein String ist, rufen wir die Funktion auf
-        if (is_string($handler)) {
+        // 1. Statische Routen prüfen
+        if (isset($routes[$path][$method])) {
+            $handler = $routes[$path][$method];
             $handler();
-        } 
+            return;
+        }
+
+        // 2. Dynamische Routen prüfen (z.B. api/sync/execute/verwaltung)
+        if (preg_match('#^api/sync/execute/([^/]+)$#', $path, $matches)) {
+            if ($method === 'POST') {
+                handleSyncExecute($matches[1]);
+                return;
+            }
+        }
+
+        if ($path === '') {
+            handleRoot();
+            return;
+        }
+
+        handleNotFound();
     } catch (Exception $e) {
         handleError($e);
     }
 }
 
 /**
- * BEISPIEL: Ein kombinierter Handler für Auth, Graph und DB
+ * HANDLER FÜR SYNC & PERMISSIONS
  */
-function handleUserProfile(): void 
-{
-    // 1. Auth-Säule: Token validieren
-    $userData = \Kai\MhbBackend20\Auth\Middleware\AuthMiddleware::check();
-    
-    // 2. Graph-Säule: (Optional) Weitere Daten von MS holen
-    // $graph = new \Kai\MhbBackend20\Graph\GraphClient($userData['access_token']);
-    
-    // 3. DB-Säule: Verbindung nutzen
-    // $db = \Kai\MhbBackend20\Database\DB::getConnection();
 
-    header('Content-Type: application/json');
-    echo json_encode([
-        'status' => 'success',
-        'user' => $userData
-    ]);
+function handleGetPermissions(): void
+{
+    // Optional: Hier AuthMiddleware::check() vorschalten
+    $controller = new \Kai\MhbBackend20\Graph\Controllers\GraphSyncController();
+    $controller->getPermissions();
+}
+
+function handleSyncExecute(string $type): void
+{
+    $controller = new \Kai\MhbBackend20\Graph\Controllers\GraphSyncController();
+    $controller->executeSync($type);
 }
 
 /**
- * Handler für die Auth-Säule
+ * BESTEHENDE HANDLER
  */
-function handleOAuthLogin(): void
-{
-    $controller = new \Kai\MhbBackend20\Auth\Controllers\OAuthController();
-    $controller->redirectToOAuth();
+function handleOAuthLogin(): void {
+    (new \Kai\MhbBackend20\Auth\Controllers\OAuthController())->redirectToOAuth();
 }
 
-function handleOAuthCallback(): void
-{
-    $controller = new \Kai\MhbBackend20\Auth\Controllers\OAuthController();
-    $controller->handleCallback();
+function handleOAuthCallback(): void {
+    (new \Kai\MhbBackend20\Auth\Controllers\OAuthController())->handleCallback();
 }
 
-function handleOAuthLogout(): void
-{
-    $controller = new \Kai\MhbBackend20\Auth\Controllers\OAuthController();
-    $controller->logout();
+function handleOAuthLogout(): void {
+    (new \Kai\MhbBackend20\Auth\Controllers\OAuthController())->logout();
 }
 
-//TODO: handleTestLetter Später entfernen
-function handleTestLetter(): void
-{
-    $controller = new \Kai\MhbBackend20\Api\Controllers\TestController();
-    $controller->getThirdLetter();
+function handleUserProfile(): void {
+    $userData = \Kai\MhbBackend20\Auth\Middleware\AuthMiddleware::check();
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'success', 'user' => $userData]);
+}
+
+function handleTestLetter(): void {
+    (new \Kai\MhbBackend20\Api\Controllers\TestController())->getThirdLetter();
 }
 
 /**
@@ -177,7 +167,6 @@ function getRequestPath(): string
     $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     $path = trim($path, '/');
     
-    // index.php aus dem Pfad entfernen, falls sie direkt aufgerufen wird
     if (strpos($path, 'index.php') === 0) {
         $path = substr($path, strlen('index.php'));
         $path = trim($path, '/');
@@ -187,10 +176,11 @@ function getRequestPath(): string
 }
 
 function handleRoot(): void { echo json_encode(['message' => 'MHB Backend API']); }
-function handleNotFound(): void { http_response_code(404); echo json_encode(['error' => 'Not Found']); }
+function handleNotFound(): void { http_response_code(404); echo json_encode(['error' => 'Not Found', 'path' => getRequestPath()]); }
 function handleMethodNotAllowed(): void { http_response_code(405); echo json_encode(['error' => 'Method Not Allowed']); }
 function handleError(Exception $e): void {
     error_log($e->getMessage());
     http_response_code(500);
+    header('Content-Type: application/json');
     echo json_encode(['error' => 'Internal Server Error', 'message' => $e->getMessage()]);
 }

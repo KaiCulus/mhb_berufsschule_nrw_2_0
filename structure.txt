@@ -1,0 +1,107 @@
+.
+├── mhb-backend-2-0
+│   ├── composer.json
+│   ├── composer.lock
+│   ├── config
+│   │   ├── graph.php
+│   │   ├── microsoft_keys.json
+│   │   └── oauth.php
+│   ├── phpunit.xml
+│   ├── public
+│   │   └── index.php
+│   ├── src
+│   │   ├── Api
+│   │   │   └── Controllers
+│   │   │       └── TestController.php
+│   │   ├── Auth
+│   │   │   ├── Controllers
+│   │   │   │   └── OAuthController.php
+│   │   │   ├── Exceptions
+│   │   │   │   └── OAuthException.php
+│   │   │   ├── Middleware
+│   │   │   │   └── AuthMiddleware.php
+│   │   │   ├── Models
+│   │   │   └── Services
+│   │   │       └── OAuthService.php
+│   │   ├── Common
+│   │   │   └── Cipher.php
+│   │   ├── Database
+│   │   │   ├── DB.php
+│   │   │   └── Repositories
+│   │   └── Graph
+│   │       ├── GraphClient.php
+│   │       └── Services
+│   │           └── MSFolderSyncService.php
+│   ├── structure.txt
+│   └── tests
+│       ├── Auth
+│       │   ├── OAuthControllerTest.php
+│       │   └── OAuthServiceTest.php
+│       └── Graph
+│           ├── folderSyncServiceTest.php
+│           └── sitesReadAllTest.php
+├── mhb-frontend-2-0
+│   ├── index.html
+│   ├── jsconfig.json
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── public
+│   │   ├── favicon.ico
+│   │   └── images
+│   │       └── bot_julia.jpg
+│   ├── README.md
+│   ├── src
+│   │   ├── App.vue
+│   │   ├── assets
+│   │   │   ├── images
+│   │   │   │   └── logo
+│   │   │   │       └── logo-tbs1.png
+│   │   │   └── main.css
+│   │   ├── components
+│   │   │   ├── adminComponents
+│   │   │   │   └── verwaltungAdminComponents
+│   │   │   │       └── syncVerwaltungFoldersButton.vue
+│   │   │   ├── footer
+│   │   │   │   └── footer.vue
+│   │   │   ├── header
+│   │   │   │   ├── headerelements
+│   │   │   │   │   ├── headerleft
+│   │   │   │   │   │   └── headerleftmain.vue
+│   │   │   │   │   ├── headermiddle
+│   │   │   │   │   │   ├── headermiddlemain.vue
+│   │   │   │   │   │   └── headermiddleSubcomponents
+│   │   │   │   │   │       └── menuEntry.vue
+│   │   │   │   │   └── headerright
+│   │   │   │   │       └── headerrightmain.vue
+│   │   │   │   └── headermain.vue
+│   │   │   ├── LoginStatus
+│   │   │   │   ├── LoginButton.vue
+│   │   │   │   └── LogoutButton.vue
+│   │   │   └── testcomponents
+│   │   │       └── TestDbView.vue
+│   │   ├── main.js
+│   │   ├── pages
+│   │   │   ├── dashboardpage
+│   │   │   │   └── dashboardpage.vue
+│   │   │   ├── home
+│   │   │   │   └── home.vue
+│   │   │   ├── loginpage
+│   │   │   │   └── loginpage.vue
+│   │   │   ├── mhbpage
+│   │   │   │   └── mhbpage.vue
+│   │   │   ├── roomavaiabilitypage
+│   │   │   │   └── roomavaiabilitypage.vue
+│   │   │   └── ticketpage
+│   │   │       └── ticketpage.vue
+│   │   ├── router
+│   │   │   └── index.js
+│   │   ├── scripts
+│   │   └── stores
+│   │       ├── authentification
+│   │       │   └── auth.js
+│   │       └── user
+│   │           └── userstore.js
+│   └── vite.config.js
+└── structure.txt
+
+52 directories, 53 files

@@ -3,14 +3,12 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Kai\\MhbBackend20\\": "src/",
-            "Kai\\MhbBackend20\\Auth\\": "src/Auth/"
+            "Kai\\MhbBackend20\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Kai\\MhbBackend20\\Tests\\": "tests/",
-            "Kai\\MhbBackend20\\Tests\\Auth\\": "tests/Auth/"
+            "Kai\\MhbBackend20\\Tests\\": "tests/"
         }
     },
     "minimum-stability": "stable",

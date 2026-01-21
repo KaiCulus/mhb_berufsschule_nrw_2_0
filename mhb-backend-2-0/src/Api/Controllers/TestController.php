@@ -1,7 +1,6 @@
 <?php
 namespace Kai\MhbBackend20\Api\Controllers;
 
-use Kai\MhbBackend20\Database\DB;
 use Kai\MhbBackend20\Common\Cipher;
 use Kai\MhbBackend20\Auth\Middleware\AuthMiddleware;
 
@@ -18,7 +17,7 @@ class TestController {
             return;
         }
 
-        $db = DB::getConnection();
+        $db = \Kai\MhbBackend20\Database\DB::getInstance()->getConnection();
         $stmt = $db->prepare("SELECT email_encrypted FROM users WHERE id = ?");
         $stmt->execute([$id]);
         $user = $stmt->fetch();

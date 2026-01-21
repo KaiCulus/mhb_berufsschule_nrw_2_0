@@ -1,24 +1,47 @@
 import { defineStore } from 'pinia';
+import axios from '@/scripts/axios.js';
+
+// Nutzen der URL aus der .env (Vite-Syntax)
+const BACKEND_URL = import.meta.env.VITE_MHB_BACKEND_URL;
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
     dbId: null,
     isLoggedIn: false,
-    accessToken: null, // Für Microsoft Graph
-    idToken: null,     // Für DEIN PHP-Backend 
+    accessToken: null, // MS Graph Access
+    idToken: null,     // Backend ID Token
+    permissions: {},   // NEU: Hält die Rollen wie { verwaltung: true, paedagogik: false }
   }),
 
   actions: {
     async login() {
-      window.location.href = 'https://localhost:443/oauth/login';
+      // Nutzt jetzt die dynamische URL für die Migration
+      window.location.href = `${BACKEND_URL}/oauth/login`;
+    },
+
+    /**
+     * Holt die Berechtigungen vom Backend ab
+     */
+    async fetchPermissions() {
+      if (!this.isLoggedIn) return;
+      
+      try {
+        const response = await axios.get(`${BACKEND_URL}/api/sync/get-permissions`, {
+          withCredentials: true // WICHTIG für PHP Session-ID
+        });
+        this.permissions = response.data.permissions;
+      } catch (error) {
+        console.error('Berechtigungen konnten nicht geladen werden:', error);
+        this.permissions = {};
+      }
     },
 
     async checkAuthOnLoad() {
       const params = new URLSearchParams(window.location.search);
       const accessToken = params.get('access_token');
-      const idToken = params.get('id_token'); // NEU
-      const dbId = params.get('db_id');       // NEU
+      const idToken = params.get('id_token');
+      const dbId = params.get('db_id');
       const userRaw = params.get('user');
 
       if (accessToken && idToken && userRaw) {
@@ -29,7 +52,9 @@ export const useAuthStore = defineStore('auth', {
           this.user = JSON.parse(decodeURIComponent(userRaw));
           this.isLoggedIn = true;
 
-          // URL bereinigen
+          // Nach erfolgreichem URL-Login sofort Berechtigungen laden
+          await this.fetchPermissions();
+
           window.history.replaceState({}, document.title, window.location.pathname);
           return true;
         } catch (e) {
@@ -38,43 +63,25 @@ export const useAuthStore = defineStore('auth', {
         }
       }
 
-      // Prüfen, ob wir bereits durch "persist" Daten haben
+      // Falls bereits eingeloggt (via Persist), Permissions aktualisieren
       if (this.idToken && this.user) {
          this.isLoggedIn = true;
+         this.fetchPermissions(); // Läuft im Hintergrund
          return true;
       }
 
       return false;
     },
 
-    /**
-     * Hilfsmethode für API-Calls an DEIN Backend
-     */
-    getAuthHeader() {
-      if (!this.idToken) throw new Error('Nicht authentifiziert');
-      return { 'Authorization': `Bearer ${this.idToken}` };
-    },
-
-    async fetchUserData() {
-      if (!this.accessToken) return null;
-      const response = await fetch('https://graph.microsoft.com/v1.0/me', {
-        headers: { Authorization: `Bearer ${this.accessToken}` },
-      });
-      if (response.status === 401) this.logout();
-      return response.json();
-    },
-
     async logout() {
-      // Lokalen State sofort leeren
       this.user = null;
       this.dbId = null;
       this.isLoggedIn = false;
       this.accessToken = null;
       this.idToken = null;
+      this.permissions = {};
 
-      // Das Pinia-Persist-Plugin löscht nun automatisch den LocalStorage.
-      // Dann Umleitung zum Backend-Logout (welches zu MS weiterleitet)
-      window.location.href = "https://localhost:443/oauth/logout";
+      window.location.href = `${BACKEND_URL}/oauth/logout`;
     },
   },
 
@@ -83,8 +90,8 @@ export const useAuthStore = defineStore('auth', {
     strategies: [
       {
         storage: localStorage,
-        // TODO: Überlegen, ob man das Access Token reinnimmt. Vorteil: derzeit muss sich der User immer wenn er mit Graph kommuniziert, muss er sich neu anmelden, sobald er die Seite neu lädt.
-        paths: ['user', 'dbId', 'isLoggedIn', 'idToken'], 
+        // accessToken mit aufzunehmen ist sinnvoll, um Refresh-Logik zu minimieren
+        paths: ['user', 'dbId', 'isLoggedIn', 'idToken', 'accessToken', 'permissions'], 
       },
     ],
   },
