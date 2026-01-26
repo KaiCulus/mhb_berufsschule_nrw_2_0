@@ -4,7 +4,6 @@ namespace Kai\MhbBackend20\Graph\Services;
 
 use Kai\MhbBackend20\Graph\GraphClient;
 use Kai\MhbBackend20\Database\DB;
-use PDO;
 
 class MSFolderSyncService {
     private $db;
@@ -12,71 +11,104 @@ class MSFolderSyncService {
     private array $profiles;
 
     public function __construct(GraphClient $graphClient) {
-        // Nutzt dein Singleton für die Datenbankverbindung
         $this->db = DB::getInstance()->getConnection();
         $this->graphClient = $graphClient;
-        
-        // Pfad zur Config: Von src/Graph/Services/ drei Ebenen hoch zu config/
         $config = require __DIR__ . '/../../../config/graph.php';
         $this->profiles = $config['sync_profiles'] ?? [];
     }
 
-    /**
-     * Startet den Sync für ein bestimmtes Profil aus config/graph.php
-     */
     public function syncByProfile(string $profileKey): void {
         if (!isset($this->profiles[$profileKey])) {
-            throw new \Exception("Profil '$profileKey' nicht in config/graph.php gefunden.");
+            throw new \Exception("Profil '$profileKey' nicht konfiguriert.");
         }
 
         $profile = $this->profiles[$profileKey];
         
-        if (empty($profile['drive_id']) || empty($profile['folder_id'])) {
-            throw new \Exception("Drive ID oder Folder ID für Profil '$profileKey' fehlt in der Konfiguration.");
-        }
+        // 1. Startzeitpunkt fixieren (Single Source of Truth)
+        $syncTimestamp = date('Y-m-d H:i:s');
 
-        // Start der Rekursion
+        // 2. Rekursiv synchronisieren
+        // Wir geben $syncTimestamp mit, damit alle Items exakt diese Zeit bekommen
         $this->fetchAndSaveRecursive(
             $profile['drive_id'], 
             $profile['folder_id'], 
-            $profile['folder_id'] // Der Startordner ist sein eigener Parent im Root-Kontext
+            $profile['folder_id'],
+            $profileKey,
+            $syncTimestamp 
         );
+
+        // 3. Aufräumen
+        $this->softDeleteMissingItems($profileKey, $syncTimestamp);
     }
 
-    /**
-     * Kern-Logik: Holt Daten von Microsoft und spiegelt sie in die MariaDB
-     */
-    private function fetchAndSaveRecursive(string $driveId, string $folderId, string $parentId): void {
-        // Holt die Items über den GraphClient
+    private function fetchAndSaveRecursive(
+        string $driveId, 
+        string $folderId, 
+        string $parentId, 
+        string $profileKey,
+        string $syncTimestamp
+    ): void {
         $items = $this->graphClient->getDriveChildren($driveId, $folderId);
 
         foreach ($items as $item) {
             $isFolder = isset($item['folder']) ? 1 : 0;
             
-            // Vorbereitung des SQL-Statements (Upsert)
+            // KORREKTUR: Wir nutzen im UPDATE-Teil jetzt VALUES(...) 
+            // statt die Parameter (:parent_id etc.) erneut zu binden.
+            // Das verhindert den "Invalid parameter number" Fehler.
             $stmt = $this->db->prepare("
-                INSERT INTO documents (ms_id, parent_id, name_original, share_url, is_folder)
-                VALUES (:ms_id, :parent_id, :name, :url, :is_folder)
+                INSERT INTO documents (ms_id, parent_id, name_original, share_url, is_folder, sync_scope, last_synced, deleted_at)
+                VALUES (:ms_id, :parent_id, :name, :url, :is_folder, :scope, :last_synced, NULL)
                 ON DUPLICATE KEY UPDATE 
                     parent_id = VALUES(parent_id),
                     name_original = VALUES(name_original),
                     share_url = VALUES(share_url),
                     is_folder = VALUES(is_folder),
-                    last_synced = CURRENT_TIMESTAMP
+                    sync_scope = VALUES(sync_scope),
+                    last_synced = VALUES(last_synced), 
+                    deleted_at = NULL
             ");
 
             $stmt->execute([
                 'ms_id'     => $item['id'],
                 'parent_id' => $parentId,
                 'name'      => $item['name'],
-                'url'       => $item['webUrl'] ?? $item['web_url'] ?? null,
-                'is_folder' => $isFolder
+                'url'       => $item['webUrl'] ?? null,
+                'is_folder' => $isFolder,
+                'scope'     => $profileKey,
+                'last_synced' => $syncTimestamp
             ]);
 
-            // Wenn das Item ein Ordner ist, gehen wir rekursiv eine Ebene tiefer
             if ($isFolder) {
-                $this->fetchAndSaveRecursive($driveId, $item['id'], $item['id']);
+                $this->fetchAndSaveRecursive($driveId, $item['id'], $item['id'], $profileKey, $syncTimestamp);
             }
+        }
+    }
+
+    private function softDeleteMissingItems(string $profileKey, string $syncTimestamp): void {
+        // Logik: Alles was NICHT exakt den aktuellen Zeitstempel hat (oder neuer ist), ist alt.
+        // Da wir beim Update oben exakt $syncTimestamp setzen, sind alle aktiven Dateien = $syncTimestamp.
+        // Alles was < $syncTimestamp ist, wurde in diesem Lauf nicht angefasst.
+        
+        $stmt = $this->db->prepare("
+            UPDATE documents 
+            SET deleted_at = :now
+            WHERE sync_scope = :scope 
+            AND last_synced < :startTime
+            AND deleted_at IS NULL
+        ");
+        
+        $stmt->execute([
+            'now'       => date('Y-m-d H:i:s'), // Löschzeitpunkt ist "jetzt"
+            'scope'     => $profileKey,
+            'startTime' => $syncTimestamp       // Schwelle ist der Start des Laufs
+        ]);
+        
+        //TODO: Methode entfernen wenn nichts mehr geloggt werden muss, da unnötig:
+        $deletedCount = $stmt->rowCount();
+        if ($deletedCount > 0) {
+            // Optional: Loggen
+            // error_log("Cleanup '$profileKey': $deletedCount Dokumente entfernt.");
         }
     }
 }

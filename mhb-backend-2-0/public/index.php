@@ -80,7 +80,7 @@ function handleRequest(): void
 
     try {
         /**
-         * ROUTING TABELLE
+         * Statische ROUTING TABELLE
          */
         $routes = [
             'oauth/login'             => ['GET'  => 'handleOAuthLogin'],
@@ -91,17 +91,25 @@ function handleRequest(): void
             'api/test-letter'         => ['GET'  => 'handleTestLetter'],
         ];
 
-        // 1. Statische Routen prüfen
+        // Statische Routen prüfen
         if (isset($routes[$path][$method])) {
             $handler = $routes[$path][$method];
             $handler();
             return;
         }
 
-        // 2. Dynamische Routen prüfen (z.B. api/sync/execute/verwaltung)
+        // Dynamische Routen prüfen (z.B. api/sync/execute/verwaltung)
         if (preg_match('#^api/sync/execute/([^/]+)$#', $path, $matches)) {
             if ($method === 'POST') {
                 handleSyncExecute($matches[1]);
+                return;
+            }
+        }
+
+        // Dokumente nach Scope abrufen (Dynamische Route)
+        if (preg_match('#^api/documents/([^/]+)$#', $path, $matches)) {
+            if ($method === 'GET') {
+                handleGetDocumentsByScope($matches[1]);
                 return;
             }
         }
@@ -153,6 +161,12 @@ function handleUserProfile(): void {
     $userData = \Kai\MhbBackend20\Auth\Middleware\AuthMiddleware::check();
     header('Content-Type: application/json');
     echo json_encode(['status' => 'success', 'user' => $userData]);
+}
+
+function handleGetDocumentsByScope(string $scope): void
+{
+    $controller = new \Kai\MhbBackend20\Database\Controllers\DocumentController();
+    $controller->getByScope($scope);
 }
 
 function handleTestLetter(): void {

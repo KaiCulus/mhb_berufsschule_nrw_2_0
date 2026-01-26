@@ -1,4 +1,6 @@
 .
+├── bin
+│   └── console-sync.php
 ├── composer.json
 ├── composer.lock
 ├── config
@@ -42,4 +44,4 @@
         ├── folderSyncServiceTest.php
         └── sitesReadAllTest.php
 
-21 directories, 22 files
+22 directories, 23 files
