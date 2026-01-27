@@ -89,6 +89,10 @@ function handleRequest(): void
             'api/sync/get-permissions' => ['GET'  => 'handleGetPermissions'],
             'api/user/profile'        => ['GET'  => 'handleUserProfile'],
             'api/test-letter'         => ['GET'  => 'handleTestLetter'],
+            'api/favorites'            => [
+                'POST'   => 'handleAddFavorite',
+                'DELETE' => 'handleRemoveFavorite'
+            ],
         ];
 
         // Statische Routen prüfen
@@ -110,6 +114,14 @@ function handleRequest(): void
         if (preg_match('#^api/documents/([^/]+)$#', $path, $matches)) {
             if ($method === 'GET') {
                 handleGetDocumentsByScope($matches[1]);
+                return;
+            }
+        }
+
+        // Dynamische Route für GET api/favorites/{userId}
+        if (preg_match('#^api/favorites/(\d+)$#', $path, $matches)) {
+            if ($method === 'GET') {
+                handleGetFavorites($matches[1]);
                 return;
             }
         }
@@ -171,6 +183,29 @@ function handleGetDocumentsByScope(string $scope): void
 
 function handleTestLetter(): void {
     (new \Kai\MhbBackend20\Api\Controllers\TestController())->getThirdLetter();
+}
+
+/**
+ * HANDLER FÜR FAVORITEN
+ */
+function handleGetFavorites(string $userId): void
+{
+    $controller = new \Kai\MhbBackend20\Database\Controllers\FavoriteController();
+    $controller->getFavorites((int)$userId);
+}
+
+function handleAddFavorite(): void
+{
+    header('Content-Type: application/json');
+    $controller = new \Kai\MhbBackend20\Database\Controllers\FavoriteController();
+    $controller->addFavorite();
+}
+
+function handleRemoveFavorite(): void
+{
+    header('Content-Type: application/json');
+    $controller = new \Kai\MhbBackend20\Database\Controllers\FavoriteController();
+    $controller->removeFavorite();
 }
 
 /**

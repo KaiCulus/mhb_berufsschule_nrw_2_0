@@ -11,7 +11,7 @@
     setTimeout(() =>{
       const mainMenu = document.getElementById('mainMenu')
       if (mainMenu) {
-        menu.classList.toggle('visible', isVisible.value)
+        mainMenu.classList.toggle('visible', isVisible.value)
       }
     }, 10)
   }
@@ -78,7 +78,7 @@
     z-index: 1001;
     transition: opacity 0.3s, transform 0.3s;
   }
-  #MainMenu:not(.visible) {
+  #mainMenu:not(.visible) {
     opacity: 0;
     transform: translateY(-10px);
     pointer-events: none;

@@ -27,6 +27,9 @@
 │   ├── Common
 │   │   └── Cipher.php
 │   ├── Database
+│   │   ├── Controllers
+│   │   │   ├── DocumentController.php
+│   │   │   └── FavoriteController.php
 │   │   ├── DB.php
 │   │   └── Repositories
 │   └── Graph
@@ -44,4 +47,4 @@
         ├── folderSyncServiceTest.php
         └── sitesReadAllTest.php
 
-22 directories, 23 files
+23 directories, 25 files

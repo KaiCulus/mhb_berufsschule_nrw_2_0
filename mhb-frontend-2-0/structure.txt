@@ -1,0 +1,81 @@
+.
+├── index.html
+├── jsconfig.json
+├── package.json
+├── package-lock.json
+├── public
+│   ├── favicon.ico
+│   └── images
+│       └── bot_julia.jpg
+├── README.md
+├── src
+│   ├── App.vue
+│   ├── assets
+│   │   ├── images
+│   │   │   └── logo
+│   │   │       └── logo-tbs1.png
+│   │   └── main.css
+│   ├── components
+│   │   ├── adminComponents
+│   │   │   └── SyncFolderButton.vue
+│   │   ├── documents
+│   │   │   ├── DocumentSearch.vue
+│   │   │   └── DocumentTree.vue
+│   │   ├── footer
+│   │   │   └── footer.vue
+│   │   ├── header
+│   │   │   ├── headerelements
+│   │   │   │   ├── headerleft
+│   │   │   │   │   └── headerleftmain.vue
+│   │   │   │   ├── headermiddle
+│   │   │   │   │   ├── headermiddlemain.vue
+│   │   │   │   │   └── headermiddleSubcomponents
+│   │   │   │   │       └── menuEntry.vue
+│   │   │   │   └── headerright
+│   │   │   │       └── headerrightmain.vue
+│   │   │   └── headermain.vue
+│   │   ├── LoginStatus
+│   │   │   ├── LoginButton.vue
+│   │   │   └── LogoutButton.vue
+│   │   ├── testcomponents
+│   │   └── userComponents
+│   │       ├── userDocuments
+│   │       │   ├── documentOptionsMenu
+│   │       │   │   ├── DocumentOptionsMain.vue
+│   │       │   │   └── documentOptionsMenuSubelements
+│   │       │   │       ├── DocumentOptionsAliasVoting.vue
+│   │       │   │       └── DocumentOptionsFavorites.vue
+│   │       │   └── documentsDashboard
+│   │       │       └── FavoriteDocumentsDashboard.vue
+│   │       └── userTickets
+│   ├── main.js
+│   ├── pages
+│   │   ├── dashboardpage
+│   │   │   └── dashboardpage.vue
+│   │   ├── home
+│   │   │   └── home.vue
+│   │   ├── individualDocumentVisualizationPages
+│   │   │   └── unspecificDocumentsPage.vue
+│   │   ├── loginpage
+│   │   │   └── loginpage.vue
+│   │   ├── mhbpage
+│   │   │   └── mhbpage.vue
+│   │   ├── roomavaiabilitypage
+│   │   │   └── roomavaiabilitypage.vue
+│   │   └── ticketpage
+│   │       └── ticketpage.vue
+│   ├── router
+│   │   └── index.js
+│   ├── scripts
+│   │   └── axios.js
+│   └── stores
+│       ├── authentification
+│       │   └── auth.js
+│       ├── documents
+│       │   └── documents.js
+│       └── user
+│           └── userstore.js
+├── structure.txt
+└── vite.config.js
+
+39 directories, 40 files

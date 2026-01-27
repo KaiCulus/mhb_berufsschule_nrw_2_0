@@ -1,0 +1,40 @@
+<script setup>
+    import DocumentOptionsAliasVoting from './documentOptionsMenuSubelements/DocumentOptionsAliasVoting.vue';
+    import DocumentOptionsFavorites from './documentOptionsMenuSubelements/DocumentOptionsFavorites.vue';
+
+    const props = defineProps({
+        item: Object
+    });
+    const emit = defineEmits(['close']);
+</script>
+
+<template>
+    <div class="options-overlay" @click.self="emit('close')">
+        <div class="options-card">
+            <header>
+                <h3>Optionen für {{ item.name_original }}</h3>
+                <button @click="emit('close')">X</button>
+            </header>
+            
+            <div class="options-content">
+                <DocumentOptionsFavorites :item="item" />
+                
+                <hr />
+                
+                <DocumentOptionsAliasVoting :item="item" />
+            </div>
+        </div>
+    </div>
+</template>
+
+<style scoped>
+.options-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000;
+}
+.options-card {
+    background: white; padding: 20px; border-radius: 8px; width: 350px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.options-content { display: flex; flex-direction: column; gap: 15px; }
+</style>
