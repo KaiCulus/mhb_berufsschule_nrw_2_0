@@ -19,6 +19,13 @@
 │   │   ├── adminComponents
 │   │   │   └── SyncFolderButton.vue
 │   │   ├── documents
+│   │   │   ├── documentOptionsMenu
+│   │   │   │   ├── DocumentOptionsMain.vue
+│   │   │   │   └── documentOptionsMenuSubelements
+│   │   │   │       ├── DocumentOptionsAliasVoting.vue
+│   │   │   │       └── DocumentOptionsFavorites.vue
+│   │   │   ├── documentsDashboard
+│   │   │   │   └── FavoriteDocumentsDashboard.vue
 │   │   │   ├── DocumentSearch.vue
 │   │   │   └── DocumentTree.vue
 │   │   ├── footer
@@ -38,16 +45,9 @@
 │   │   │   ├── LoginButton.vue
 │   │   │   └── LogoutButton.vue
 │   │   ├── testcomponents
-│   │   └── userComponents
-│   │       ├── userDocuments
-│   │       │   ├── documentOptionsMenu
-│   │       │   │   ├── DocumentOptionsMain.vue
-│   │       │   │   └── documentOptionsMenuSubelements
-│   │       │   │       ├── DocumentOptionsAliasVoting.vue
-│   │       │   │       └── DocumentOptionsFavorites.vue
-│   │       │   └── documentsDashboard
-│   │       │       └── FavoriteDocumentsDashboard.vue
-│   │       └── userTickets
+│   │   └── tickets
+│   │       ├── TicketFormComponents
+│   │       └── TicketFormMain.vue
 │   ├── main.js
 │   ├── pages
 │   │   ├── dashboardpage
@@ -78,4 +78,4 @@
 ├── structure.txt
 └── vite.config.js
 
-39 directories, 40 files
+38 directories, 41 files

@@ -81,25 +81,35 @@ class OAuthController {
             //Email nutzen, um DB Eintrag für Nutzer anzulegen/ Die in der DB enthaltene Nutzer ID herauszufinden, um diese später für DB_Anfragen bereitzuhalten.
 
             $email = $userData['email'] ?? $userData['upn'];
+            $displayName = $userData['name'] ?? 'Unbekannter Nutzer'; // Name aus dem ID-Token
             $db = \Kai\MhbBackend20\Database\DB::getInstance()->getConnection();
 
-            // Suchen via Hash -> Sonst neuen Eintrag anlegen.
             $emailHash = hash('sha256', $email);
+            $encryptionKey = $_ENV['APP_ENCRYPTION_KEY'];
+
+            // Hilfsfunktion zur Verschlüsselung (kannst du auch in eine Common-Klasse auslagern)
+            $encryptData = function($data) use ($encryptionKey) {
+                $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
+                $encrypted = openssl_encrypt($data, 'aes-256-cbc', $encryptionKey, 0, $iv);
+                return base64_encode($iv . $encrypted);
+            };
+
             $stmt = $db->prepare("SELECT id FROM users WHERE email_hash = ?");
             $stmt->execute([$emailHash]);
             $userRecord = $stmt->fetch();
 
             if ($userRecord) {
                 $dbId = $userRecord['id'];
+                // Optional: Name bei jedem Login aktualisieren, falls er sich bei MS geändert hat
+                $upd = $db->prepare("UPDATE users SET display_name_encrypted = ? WHERE id = ?");
+                $upd->execute([$encryptData($displayName), $dbId]);
             } else {
-                // Neu anlegen mit Verschlüsselung 
-                $encryptionKey = $_ENV['APP_ENCRYPTION_KEY'];
-                $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
-                $encrypted = openssl_encrypt($email, 'aes-256-cbc', $encryptionKey, 0, $iv);
-                $storageValue = base64_encode($iv . $encrypted);
+                // Neu anlegen mit verschlüsselter Mail UND verschlüsseltem Namen
+                $encEmail = $encryptData($email);
+                $encName = $encryptData($displayName);
 
-                $ins = $db->prepare("INSERT INTO users (email_hash, email_encrypted) VALUES (?, ?)");
-                $ins->execute([$emailHash, $storageValue]);
+                $ins = $db->prepare("INSERT INTO users (email_hash, email_encrypted, display_name_encrypted) VALUES (?, ?, ?)");
+                $ins->execute([$emailHash, $encEmail, $encName]);
                 $dbId = $db->lastInsertId();
             }
 

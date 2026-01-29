@@ -1,6 +1,6 @@
 <script setup>
-    import DocumentOptionsAliasVoting from './documentOptionsMenuSubelements/DocumentOptionsAliasVoting.vue';
-    import DocumentOptionsFavorites from './documentOptionsMenuSubelements/DocumentOptionsFavorites.vue';
+    import DocumentOptionsAliasVoting from '@/components/documents/documentOptionsMenu/documentOptionsMenuSubelements/DocumentOptionsAliasVoting.vue';
+    import DocumentOptionsFavorites from '@/components/documents/documentOptionsMenu/documentOptionsMenuSubelements/DocumentOptionsFavorites.vue';
 
     const props = defineProps({
         item: Object

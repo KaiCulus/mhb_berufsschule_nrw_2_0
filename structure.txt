@@ -1,5 +1,7 @@
 .
 ├── mhb-backend-2-0
+│   ├── bin
+│   │   └── console-sync.php
 │   ├── composer.json
 │   ├── composer.lock
 │   ├── config
@@ -26,20 +28,21 @@
 │   │   ├── Common
 │   │   │   └── Cipher.php
 │   │   ├── Database
+│   │   │   ├── Controllers
+│   │   │   │   ├── AliasController.php
+│   │   │   │   ├── DocumentController.php
+│   │   │   │   ├── FavoriteController.php
+│   │   │   │   └── TicketController.php
 │   │   │   ├── DB.php
 │   │   │   └── Repositories
 │   │   └── Graph
+│   │       ├── Controllers
+│   │       │   └── GraphSyncController.php
 │   │       ├── GraphClient.php
 │   │       └── Services
-│   │           └── MSFolderSyncService.php
-│   ├── structure.txt
-│   └── tests
-│       ├── Auth
-│       │   ├── OAuthControllerTest.php
-│       │   └── OAuthServiceTest.php
-│       └── Graph
-│           ├── folderSyncServiceTest.php
-│           └── sitesReadAllTest.php
+│   │           ├── MSFolderSyncService.php
+│   │           └── TicketMailService.php
+│   └── structure.txt
 ├── mhb-frontend-2-0
 │   ├── index.html
 │   ├── jsconfig.json
@@ -59,8 +62,17 @@
 │   │   │   └── main.css
 │   │   ├── components
 │   │   │   ├── adminComponents
-│   │   │   │   └── verwaltungAdminComponents
-│   │   │   │       └── syncVerwaltungFoldersButton.vue
+│   │   │   │   └── SyncFolderButton.vue
+│   │   │   ├── documents
+│   │   │   │   ├── documentOptionsMenu
+│   │   │   │   │   ├── DocumentOptionsMain.vue
+│   │   │   │   │   └── documentOptionsMenuSubelements
+│   │   │   │   │       ├── DocumentOptionsAliasVoting.vue
+│   │   │   │   │       └── DocumentOptionsFavorites.vue
+│   │   │   │   ├── documentsDashboard
+│   │   │   │   │   └── FavoriteDocumentsDashboard.vue
+│   │   │   │   ├── DocumentSearch.vue
+│   │   │   │   └── DocumentTree.vue
 │   │   │   ├── footer
 │   │   │   │   └── footer.vue
 │   │   │   ├── header
@@ -77,14 +89,22 @@
 │   │   │   ├── LoginStatus
 │   │   │   │   ├── LoginButton.vue
 │   │   │   │   └── LogoutButton.vue
-│   │   │   └── testcomponents
-│   │   │       └── TestDbView.vue
+│   │   │   ├── testcomponents
+│   │   │   └── tickets
+│   │   │       ├── TicketFormComponents
+│   │   │       │   ├── TicketLocationInput.vue
+│   │   │       │   ├── TicketPriorityInfo.vue
+│   │   │       │   └── TicketTypeSelect.vue
+│   │   │       ├── TicketFormMain.vue
+│   │   │       └── TicketVisualization.vue
 │   │   ├── main.js
 │   │   ├── pages
 │   │   │   ├── dashboardpage
 │   │   │   │   └── dashboardpage.vue
 │   │   │   ├── home
 │   │   │   │   └── home.vue
+│   │   │   ├── individualDocumentVisualizationPages
+│   │   │   │   └── unspecificDocumentsPage.vue
 │   │   │   ├── loginpage
 │   │   │   │   └── loginpage.vue
 │   │   │   ├── mhbpage
@@ -96,12 +116,16 @@
 │   │   ├── router
 │   │   │   └── index.js
 │   │   ├── scripts
+│   │   │   └── axios.js
 │   │   └── stores
 │   │       ├── authentification
 │   │       │   └── auth.js
+│   │       ├── documents
+│   │       │   └── documents.js
 │   │       └── user
 │   │           └── userstore.js
+│   ├── structure.txt
 │   └── vite.config.js
 └── structure.txt
 
-52 directories, 53 files
+59 directories, 70 files

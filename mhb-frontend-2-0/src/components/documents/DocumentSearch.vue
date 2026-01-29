@@ -1,16 +1,22 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { useDocumentStore } from '@/stores/documents/documents';
-import DocumentOptionsMain from '../userComponents/userDocuments/documentOptionsMenu/DocumentOptionsMain.vue';
+import DocumentOptionsMain from '@/components/documents/documentOptionsMenu/DocumentOptionsMain.vue';
 
 const store = useDocumentStore();
 const selectedItemForOptions = ref(null);
 const showOptions = ref(false);
 
-// Reset des Tastatur-Index bei neuer Suche
 watch(() => store.searchQuery, () => {
   store.searchSelectedIndex = -1;
 });
+
+// Zentrale Funktion zum Öffnen des Dokuments
+const openDocument = (doc) => {
+  if (doc && doc.share_url) {
+    window.open(doc.share_url, '_blank');
+  }
+};
 
 const handleKeydown = (e) => {
   const results = store.filteredDocuments;
@@ -27,8 +33,7 @@ const handleKeydown = (e) => {
     store.searchSelectedIndex = Math.max(store.searchSelectedIndex - 1, 0);
     e.preventDefault();
   } else if (e.key === 'Enter' && store.searchSelectedIndex >= 0) {
-    const target = results[store.searchSelectedIndex];
-    window.open(target.share_url, '_blank');
+    openDocument(results[store.searchSelectedIndex]);
   }
 };
 
@@ -37,10 +42,10 @@ const openOptions = (doc) => {
   showOptions.value = true;
 };
 
-const getBreadcrumb = (doc) => {
-  // Generiert den Pfad aus dem Store (rootId null zeigt den vollen Pfad)
-  const path = store.getPath(doc.ms_id, null);
-  return path.map(p => p.name_original).join(' > ');
+// Tooltip-Logik (wie im DocumentTree)
+const getBreadcrumbTooltip = (doc) => {
+  const pathArray = store.getPath(doc.ms_id, null);
+  return pathArray.map(p => p.name_original).join(' > ');
 };
 
 const clearSearch = () => {
@@ -56,7 +61,7 @@ const clearSearch = () => {
         <input 
           v-model="store.searchQuery" 
           type="text" 
-          placeholder="Pfeiltasten = Navigieren, Esc = leeren"
+          placeholder="Suche... (Pfeiltasten zum Navigieren)"
           class="search-input"
           @focus="store.searchSelectedIndex = -1"
         />
@@ -70,13 +75,21 @@ const clearSearch = () => {
           class="result-item"
           :class="{ 'is-selected': index === store.searchSelectedIndex }"
           @mouseenter="store.searchSelectedIndex = index"
+          @click="openDocument(doc)" 
         >
-          <div class="result-content" @click="window.open(doc.share_url, '_blank')">
+          <div class="result-content">
             <div class="item-main">
-              <span class="icon">{{ doc.is_folder ? '📁' : '📄' }}</span>
+              <span class="icon" :title="getBreadcrumbTooltip(doc)">
+                {{ doc.is_folder ? '📁' : '📄' }}
+              </span>
               <span class="name">{{ doc.name_original }}</span>
             </div>
-            <div class="breadcrumb">{{ getBreadcrumb(doc) }}</div>
+            
+            <div v-if="doc.aliases && doc.aliases.length > 0" class="alias-tags">
+              <span v-for="alias in doc.aliases" :key="alias" class="alias-tag">
+                🏷️ {{ alias }}
+              </span>
+            </div>
           </div>
 
           <div class="actions">
@@ -211,5 +224,36 @@ const clearSearch = () => {
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   color: #666;
   text-align: center;
+}
+
+.alias-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+  padding-left: 28px;
+}
+
+.alias-tag {
+  font-size: 0.7rem;
+  background: #f0f0f0;
+  color: #555;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+}
+
+.icon {
+  cursor: help; /* Signalisiert, dass es hier Infos per Hover gibt */
+}
+
+/* Fix für Click-Area: Sicherstellen, dass der Content nicht den Klick schluckt */
+.result-content {
+  flex-grow: 1;
+  pointer-events: none; /* Klicks gehen durch auf .result-item */
+}
+
+.result-item * {
+  pointer-events: auto; /* Buttons und Links innerhalb sollen wieder klickbar sein */
 }
 </style>

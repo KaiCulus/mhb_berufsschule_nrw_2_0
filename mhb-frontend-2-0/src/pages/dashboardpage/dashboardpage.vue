@@ -1,5 +1,6 @@
 <script setup>
-import FavoriteDocumentsDashboard from '@/components/userComponents/userDocuments/documentsDashboard/FavoriteDocumentsDashboard.vue';
+import FavoriteDocumentsDashboard from '@/components/documents/documentsDashboard/FavoriteDocumentsDashboard.vue';
+import TicketVisualization from '@/components/tickets/TicketVisualization.vue';
   
 </script>
 
@@ -11,6 +12,9 @@ import FavoriteDocumentsDashboard from '@/components/userComponents/userDocument
       <h2>⭐ Meine Verwaltungsfavoriten</h2>
       <FavoriteDocumentsDashboard 
         scope="verwaltung"
+      />
+      <TicketVisualization
+        mode="personal"
       />
     </section>
   </div>

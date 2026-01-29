@@ -36,11 +36,23 @@ export const useDocumentStore = defineStore('documents', {
     },
     filteredDocuments: (state) => {
         const query = state.searchQuery.toLowerCase().trim();
-        if (!query) return [];
-        return state.documents.filter(doc => 
-        doc.name_original.toLowerCase().includes(query)
-        );
-    },
+        
+        // Wenn die Suche leer ist, geben wir sofort ein leeres Array zurück
+        if (!query || query.length < 2) return []; // Optional: Erst ab 2 Zeichen suchen
+
+        return state.documents.filter(doc => {
+            // 1. Suche im Originalnamen
+            const nameMatch = doc.name_original && 
+                            doc.name_original.toLowerCase().includes(query);
+
+            // 2. Suche in Aliasen (nur wenn das Array existiert und nicht leer ist)
+            const aliasMatch = Array.isArray(doc.aliases) && doc.aliases.some(a => {
+            return a && a.toLowerCase().includes(query);
+            });
+
+            return nameMatch || aliasMatch;
+        });
+    }
   },
   actions: {
       async fetchDocuments(scope) {
@@ -112,6 +124,26 @@ export const useDocumentStore = defineStore('documents', {
         },
         setSearchSelectedIndex(index) {
             this.searchSelectedIndex = index;
+        },
+        async fetchAliases(docId) {
+            const authStore = useAuthStore();
+            const response = await axios.get(`/api/aliases/${docId}/${authStore.dbId}`);
+            return response.data; // Wir speichern Aliase lokal in der Komponente, da sie flüchtig sind
+        },
+        async suggestAlias(docId, aliasText) {
+            const authStore = useAuthStore();
+            await axios.post(`/api/aliases`, {
+                docId: docId,
+                aliasText: aliasText,
+                userId: authStore.dbId
+            });
+        },
+        async toggleAliasVote(aliasId) {
+            const authStore = useAuthStore();
+            await axios.post(`/api/aliases/vote`, {
+                aliasId: aliasId,
+                userId: authStore.dbId
+            });
         }
     }
 });

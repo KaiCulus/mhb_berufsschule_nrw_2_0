@@ -1,7 +1,7 @@
 <script setup>
   import { ref, computed } from 'vue';
   import { useDocumentStore } from '@/stores/documents/documents';
-  import DocumentOptionsMain from '../userComponents/userDocuments/documentOptionsMenu/DocumentOptionsMain.vue';
+  import DocumentOptionsMain from '@/components/documents/documentOptionsMenu/DocumentOptionsMain.vue';
 
   const props = defineProps({
     parentId: String,
