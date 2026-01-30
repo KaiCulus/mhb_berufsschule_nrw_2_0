@@ -12,7 +12,7 @@ class GraphClient {
 
     public function __construct() {
         // Lädt die globale Graph-Konfiguration
-        $this->config = require __DIR__ . '/../../config/graph.php';
+        $this->config = require_once __DIR__ . '/../../config/graph.php';
         $baseUrl = rtrim($this->config['base_url'],'/') . '/';
         $this->httpClient = new Client([
             'base_uri' => $baseUrl,

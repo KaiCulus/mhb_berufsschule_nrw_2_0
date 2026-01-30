@@ -1,19 +1,23 @@
 <script setup>
-const props = defineProps(['type', 'building', 'room']);
+const props = defineProps({
+  type: String,
+  building: String,
+  room: String,
+  isReadonly: Boolean
+});
 const emit = defineEmits(['update:type', 'update:building', 'update:room']);
 
 // Liste deiner Schulgebäude
 const buildings = [
-  'Hauptgebäude (A)',
-  'Nebengebäude (B)',
-  'Sporthalle',
-  'Werkstattbereich',
-  'Verwaltung'
+  'Hauptgebäude (R)',
+  'Chemie/Turn (S)',
+  'Technologiezentrum (T)',
+  'Landwirtschaft (L)'
 ];
 
 const updateType = (newType) => {
+  if (props.isReadonly) return;
   emit('update:type', newType);
-  // Reset der Felder bei Typwechsel für saubere Daten
   if (newType === 'other') {
     emit('update:building', '');
     emit('update:room', '');
@@ -22,60 +26,46 @@ const updateType = (newType) => {
 </script>
 
 <template>
-  <div class="location-container">
+<div class="location-container" :class="{ 'readonly': isReadonly }">
     <label>Ort des Problems</label>
     
-    <div class="type-toggle">
-      <button 
-        type="button"
-        :class="{ active: type === 'building' }" 
-        @click="updateType('building')"
-      >
-        🏫 Gebäude / Raum
-      </button>
-      <button 
-        type="button"
-        :class="{ active: type === 'other' }" 
-        @click="updateType('other')"
-      >
-        📍 Sonstiger Ort
-      </button>
+    <div v-if="isReadonly" class="location-display">
+      <span v-if="type === 'building'" class="loc-badge">
+        🏫 {{ building }} — Raum: {{ room }}
+      </span>
+      <span v-else class="loc-badge">
+        📍 Sonstiger Ort: {{ room }}
+      </span>
     </div>
 
-    <div v-if="type === 'building'" class="location-fields animate-slide">
-      <div class="field-group">
-        <select 
-          :value="building" 
-          @change="emit('update:building', $event.target.value)"
-          required
-        >
-          <option value="" disabled>Gebäude wählen...</option>
-          <option v-for="b in buildings" :key="b" :value="b">{{ b }}</option>
-        </select>
+    <template v-else>
+      <div class="type-toggle">
+        <button type="button" :class="{ active: type === 'building' }" @click="updateType('building')">
+          🏫 Gebäude / Raum
+        </button>
+        <button type="button" :class="{ active: type === 'other' }" @click="updateType('other')">
+          📍 Sonstiger Ort
+        </button>
       </div>
 
-      <div class="field-group">
-        <input 
-          type="text" 
-          :value="room" 
-          @input="emit('update:room', $event.target.value)"
-          placeholder="Raumnummer (z.B. A104)"
-          required
-        />
+      <div v-if="type === 'building'" class="location-fields animate-slide">
+        <div class="field-group">
+          <select :value="building" @change="emit('update:building', $event.target.value)" required>
+            <option value="" disabled>Gebäude wählen...</option>
+            <option v-for="b in buildings" :key="b" :value="b">{{ b }}</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <input type="text" :value="room" @input="emit('update:room', $event.target.value)" placeholder="Raumnummer" required />
+        </div>
       </div>
-    </div>
 
-    <div v-else class="location-fields animate-slide">
-      <div class="field-group">
-        <input 
-          type="text" 
-          :value="room" 
-          @input="emit('update:room', $event.target.value)"
-          placeholder="Wo genau? (z.B. Schulhof, Parkplatz...)"
-          required
-        />
+      <div v-else class="location-fields animate-slide">
+        <div class="field-group">
+          <input type="text" :value="room" @input="emit('update:room', $event.target.value)" placeholder="Wo genau?" required />
+        </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
@@ -119,7 +109,7 @@ label { font-size: 0.9rem; font-weight: bold; display: block; margin-bottom: 10p
 
 .field-group { flex: 1; }
 
-input, select {
+input, select, .other-input {
   width: 100%;
   padding: 10px;
   border: 1px solid #ccc;
@@ -135,4 +125,17 @@ input, select {
   from { opacity: 0; transform: translateX(-10px); }
   to { opacity: 1; transform: translateX(0); }
 }
+
+.location-container.readonly { background: transparent; padding: 0; }
+.location-display { padding: 5px 0; }
+.loc-badge { 
+  display: inline-block; 
+  padding: 8px 12px; 
+  background: #f0f4f8; 
+  border-radius: 6px; 
+  color: #2c3e50;
+  font-weight: 500;
+  border-left: 4px solid #0e64a6;
+}
+
 </style>

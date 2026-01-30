@@ -1,10 +1,12 @@
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import axios from '@/scripts/axios';
-import TicketTypeSelect from './TicketFormComponents/TicketTypeSelect.vue';
-import TicketLocationInput from './TicketFormComponents/TicketLocationInput.vue';
-import TicketPriorityInfo from './TicketFormComponents/TicketPriorityInfo.vue';
-
+import TicketDescriptionInput from '@/components/tickets/TicketFormComponents/TicketDescriptionInput.vue';
+import TicketLocationInput from '@/components/tickets/TicketFormComponents/TicketLocationInput.vue';
+import TicketPriorityInfo from '@/components/tickets/TicketFormComponents/TicketPriorityInfo.vue';
+import TicketTitleInput from '@/components/tickets/TicketFormComponents/TicketTitleInput.vue';
+import TicketTypeSelect from '@/components/tickets/TicketFormComponents/TicketTypeSelect.vue';
+const emit =defineEmits(['created']);
 const isSubmitting = ref(false);
 const message = ref({ text: '', type: '' });
 
@@ -19,13 +21,42 @@ const ticketData = reactive({
   room: ''
 });
 
+// Validierung: Prüft ob Titel, Beschreibung und ggf. das Freitextfeld befüllt sind
+const isFormValid = computed(() => {
+  const hasTitle = ticketData.title.trim().length > 0;
+  const hasDescription = ticketData.description.trim().length > 0;
+  const hasSubCategory = ticketData.sub_category.trim().length > 0;
+const hasLocation = 
+    // Fall A: Im Gebäude -> Gebäude UND Raum müssen befüllt sein
+    (ticketData.location_type === 'building' && 
+     ticketData.building.trim().length > 0 && 
+     ticketData.room.trim().length > 0) || 
+    // Fall B: Sonstiger Ort -> Hier wird nur das 'room' Feld als Ortsbeschreibung genutzt
+    (ticketData.location_type === 'other' && 
+     ticketData.room.trim().length > 0);
+  return hasTitle && hasDescription && hasSubCategory && hasLocation;
+});
+
 const submitTicket = async () => {
+  if (!isFormValid.value) return;
   isSubmitting.value = true;
   try {
     const response = await axios.post('/api/tickets', ticketData);
     message.value = { text: 'Ticket erfolgreich erstellt! ID: #' + response.data.ticket_id, type: 'success' };
     // Formular zurücksetzen
-    Object.assign(ticketData, { title: '', description: '', building: '', room: '' });
+    setTimeout(() => {
+      emit('created'); 
+    }, 1500);
+    Object.assign(ticketData, { 
+      title: '', 
+      description: '', 
+      sub_category: '',
+      building: '', 
+      room: '',
+      category: 'it_support',
+      priority: 'medium',
+      location_type: 'building'
+    });
   } catch (error) {
     message.value = { text: 'Fehler beim Senden.', type: 'error' };
   } finally {
@@ -41,32 +72,29 @@ const submitTicket = async () => {
     <div v-if="message.text" :class="['alert', message.type]">{{ message.text }}</div>
 
     <form @submit.prevent="submitTicket">
-      <div class="form-section">
-        <label>Kurztitel</label>
-        <input v-model="ticketData.title" required placeholder="Was ist passiert?" />
-      </div>
+      <TicketTitleInput v-model="ticketData.title" :is-readonly="false" />
 
       <TicketTypeSelect 
         v-model:category="ticketData.category" 
-        v-model:subCategory="ticketData.sub_category" 
+        v-model:subCategory="ticketData.sub_category"
+        :is-readonly="false"
       />
 
-      <div class="form-section">
-        <label>Problembeschreibung</label>
-        <textarea v-model="ticketData.description" required rows="4"></textarea>
-      </div>
+      <TicketDescriptionInput v-model="ticketData.description" :is-readonly="false" />
 
       <TicketLocationInput 
         v-model:type="ticketData.location_type"
         v-model:building="ticketData.building"
         v-model:room="ticketData.room"
+        :is-readonly="false"
       />
 
-      <TicketPriorityInfo v-model="ticketData.priority" />
+      <TicketPriorityInfo v-model="ticketData.priority" :is-readonly="false" />
 
-      <button type="submit" :disabled="isSubmitting" class="submit-btn">
+      <button type="submit" :disabled="isSubmitting || !isFormValid" class="submit-btn">
         {{ isSubmitting ? 'Wird gesendet...' : 'Ticket abschicken' }}
       </button>
+      <p v-if="!isFormValid" class="validation-hint">Bitte alle Felder ausfüllen.</p>
     </form>
   </div>
 </template>
@@ -94,4 +122,5 @@ const submitTicket = async () => {
   cursor: pointer;
 }
 .submit-btn:disabled { opacity: 0.6; }
+.validation-hint { color: #e67e22; font-size: 0.8rem; margin-top: 5px; text-align: center; }
 </style>

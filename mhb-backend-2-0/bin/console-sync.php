@@ -1,7 +1,7 @@
 <?php
 //TODO: Einbindung in einen cronjob oder anderer Aufruf für automatisierte Datensynchronisation.
 //TODO: Wichtig: Eventuell ist es sinnvoll das nicht über einen cronjob zu machen. Dann muss überprüft werden, ob der Pfad dieser Datei sinnvoll ist.
-require __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 // .env laden
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
@@ -17,7 +17,7 @@ try {
     $service = new MSFolderSyncService($client);
 
     // Hier alle Profile durchgehen, die automatisch synchronisiert werden sollen
-    $profiles = ['verwaltung', 'paedagogik']; 
+    $profiles = ['verwaltung', 'paedagogik'];
     
     foreach ($profiles as $profile) {
         echo "Synchronisiere Profil: $profile...\n";

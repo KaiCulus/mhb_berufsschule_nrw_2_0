@@ -22,8 +22,8 @@ class TicketController {
     /**
      * Erstellt ein neues Ticket und versendet Benachrichtigungen
      */
-public function createTicket() {
-        $user = AuthMiddleware::check(); // AuthMiddleware liefert hoffentlich bereits entschlüsselte Daten
+    public function createTicket() {
+        $user = AuthMiddleware::check(); 
         $data = json_decode(file_get_contents('php://input'), true);
 
         $targetMail = $this->mapCategoryToMail($data['category']);
@@ -34,26 +34,46 @@ public function createTicket() {
         ");
         
         $stmt->execute([
-            $data['title'], $data['description'], $data['category'], $data['sub_category'] ?? null,
-            $data['priority'], $data['location_type'], $data['building'] ?? null, $data['room'] ?? null,
-            $user['id'], $targetMail
+            $data['title'], 
+            $data['description'], 
+            $data['category'], 
+            $data['sub_category'] ?? null,
+            $data['priority'], 
+            $data['location_type'], 
+            $data['building'] ?? null, 
+            $data['room'] ?? null,
+            $user['id'],
+            $targetMail
         ]);
 
         $ticketId = $this->db->lastInsertId();
 
-        // E-Mail an Ersteller (Klarsicht-Daten aus der Session/Middleware nutzen)
+        // E-Mails versenden
         $this->mailService->sendNotification(
             $user['email'], 
-            "Ticket eingegangen: #$ticketId - " . $data['title'],
-            "Hallo {$user['name']}, dein Ticket wurde mit der ID #$ticketId empfangen."
+            "Bestätigung: Ticket #$ticketId eingegangen",
+            "Hallo {$user['name']},<br><br>dein Ticket <b>" . htmlspecialchars($data['title']) . "</b> wurde erfolgreich erstellt."
         );
 
-        // Info an Bearbeiter-Gruppe
-        $this->mailService->sendNotification(
-            $targetMail,
-            "NEUES TICKET: #$ticketId - " . $data['title'],
-            "Ein neues Ticket in der Kategorie <b>{$data['category']}</b> wurde von {$user['name']} erstellt."
-        );
+        $location = ($data['location_type'] === 'building') 
+            ? "Gebäude: " . htmlspecialchars($data['building']) . ", Raum: " . htmlspecialchars($data['room']) 
+            : "Sonstiger Ort: " . htmlspecialchars($data['room']);
+
+        $mailBody = "
+            <div style='font-family: Arial, sans-serif; line-height: 1.6;'>
+                <h2 style='color: #0e64a6;'>Neues Ticket erstellt: #$ticketId</h2>
+                <p><strong>Titel:</strong> " . htmlspecialchars($data['title']) . "</p>
+                <hr>
+                <p><strong>Von:</strong> {$user['name']} ({$user['email']})</p>
+                <p><strong>Kategorie:</strong> {$data['category']} (" . ($data['sub_category'] ?: 'Keine Angabe') . ")</p>
+                <p><strong>Priorität:</strong> " . strtoupper($data['priority']) . "</p>
+                <p><strong>Ort:</strong> $location</p>
+                <hr>
+                <p><strong>Beschreibung:</strong><br>" . nl2br(htmlspecialchars($data['description'])) . "</p>
+            </div>
+        ";
+
+        $this->mailService->sendNotification($targetMail, "NEUES TICKET: #$ticketId - " . $data['title'], $mailBody);
 
         echo json_encode(['status' => 'success', 'ticket_id' => $ticketId]);
     }
@@ -68,7 +88,6 @@ public function createTicket() {
         ");
         $stmt->execute();
         $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
         echo json_encode($this->decryptResults($tickets, 'creator_name_enc', 'creator_name'));
     }
 
@@ -84,16 +103,22 @@ public function createTicket() {
         ");
         $stmt->execute([$userId, $userId]);
         $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
         echo json_encode($this->decryptResults($tickets, 'creator_name_enc', 'creator_name'));
     }
 
+    /**
+     * Detailansicht mit erweiterter Berechtigungsprüfung
+     */
     public function getDetail(int $ticketId) {
-        AuthMiddleware::check();
+        $user = AuthMiddleware::check();
+        
         $stmt = $this->db->prepare("
-            SELECT t.*, u.display_name_encrypted as creator_name_enc 
+            SELECT t.*, 
+                   u.display_name_encrypted as creator_name_enc,
+                   lu.display_name_encrypted as last_editor_name_enc
             FROM tickets t 
             JOIN users u ON t.created_by = u.id 
+            LEFT JOIN users lu ON t.last_edited_by = lu.id
             WHERE t.id = ?
         ");
         $stmt->execute([$ticketId]);
@@ -106,9 +131,16 @@ public function createTicket() {
         }
 
         $ticket['creator_name'] = Cipher::decrypt($ticket['creator_name_enc'], $this->encKey);
-        unset($ticket['creator_name_enc']);
+        if ($ticket['last_editor_name_enc']) {
+            $ticket['last_editor_name'] = Cipher::decrypt($ticket['last_editor_name_enc'], $this->encKey);
+        }
+        
+        // BERECHTIGUNG: Ersteller ODER Admin darf editieren
+        $isProcessor = $this->isTicketProcessor();
+        $isCreator = (int)$ticket['created_by'] === (int)$user['id'];
+        $ticket['can_edit_status'] = ($isProcessor || $isCreator);
 
-        // Kommentare entschlüsseln
+        // Kommentare laden
         $stmtComments = $this->db->prepare("
             SELECT c.*, u.display_name_encrypted as author_name_enc 
             FROM ticket_comments c
@@ -123,15 +155,11 @@ public function createTicket() {
         echo json_encode($ticket);
     }
 
-    /**
-     * Ticket folgen oder Entfolgen (Toggle)
-     */
     public function toggleSubscription() {
         $user = AuthMiddleware::check();
         $data = json_decode(file_get_contents('php://input'), true);
         $ticketId = $data['ticketId'];
 
-        // Prüfen ob Abo existiert
         $stmtCheck = $this->db->prepare("SELECT 1 FROM ticket_subscriptions WHERE user_id = ? AND ticket_id = ?");
         $stmtCheck->execute([$user['id'], $ticketId]);
 
@@ -144,40 +172,121 @@ public function createTicket() {
             $stmt->execute([$user['id'], $ticketId]);
             $status = 'subscribed';
         }
-
         echo json_encode(['status' => 'success', 'subscription' => $status]);
     }
 
     /**
-     * Kommentar hinzufügen und ggf. E-Mail triggern
+     * Fix: Spalte 'is_internal' entfernt, da sie in der DB nicht existiert
      */
     public function addComment() {
         $user = AuthMiddleware::check();
         $data = json_decode(file_get_contents('php://input'), true);
 
+        if (empty($data['comment'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Kommentar darf nicht leer sein']);
+            return;
+        }
+
+        // 'is_internal' wurde aus der Query entfernt
         $stmt = $this->db->prepare("
-            INSERT INTO ticket_comments (ticket_id, user_id, comment, is_internal) 
-            VALUES (?, ?, ?, ?)
+            INSERT INTO ticket_comments (ticket_id, user_id, comment) 
+            VALUES (?, ?, ?)
         ");
+        
         $stmt->execute([
             $data['ticketId'], 
             $user['id'], 
-            $data['comment'], 
-            $data['isInternal'] ?? false
+            $data['comment']
         ]);
-
-        // Feature: Benachrichtigung an Follower senden, wenn nicht intern
-        if (!($data['isInternal'] ?? false)) {
-            // Hier könnte man eine Schleife über alle Subscriber ziehen und den TicketMailService nutzen
-        }
 
         echo json_encode(['status' => 'success']);
     }
 
-
     /**
-     * Hilfsmethode zum Entschlüsseln von Listen
+     * Erweitert: Title und Description sind nun editierbar
      */
+    public function updateField() {
+        $user = AuthMiddleware::check();
+        $data = json_decode(file_get_contents('php://input'), true);
+        
+        // Sicherheits-Check: Darf der User dieses Ticket überhaupt anfassen?
+        $stmtCheck = $this->db->prepare("SELECT created_by FROM tickets WHERE id = ?");
+        $stmtCheck->execute([$data['ticketId']]);
+        $ticket = $stmtCheck->fetch();
+
+        $isProcessor = $this->isTicketProcessor();
+        $isCreator = $ticket && (int)$ticket['created_by'] === (int)$user['id'];
+
+        if (!$isProcessor && !$isCreator) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Keine Berechtigung']);
+            return;
+        }
+
+        // Erlaubte Felder erweitert um title und description
+        $allowedFields = ['title', 'description', 'category', 'sub_category', 'priority', 'location_type', 'building', 'room', 'status'];
+        if (!in_array($data['field'], $allowedFields)) {
+            http_response_code(400);
+            return;
+        }
+
+        $stmt = $this->db->prepare("
+            UPDATE tickets 
+            SET {$data['field']} = ?, last_edited_by = ?, updated_at = NOW() 
+            WHERE id = ?
+        ");
+        $stmt->execute([$data['value'], $user['id'], $data['ticketId']]);
+
+        echo json_encode(['status' => 'success', 'editor' => $user['name']]);
+    }
+
+    public function resolveTicket() {
+        $user = AuthMiddleware::check();
+        $data = json_decode(file_get_contents('php://input'), true);
+        $ticketId = $data['ticketId'];
+        
+        $isProcessor = $this->isTicketProcessor();
+
+        $stmt = $this->db->prepare("SELECT created_by FROM tickets WHERE id = ?");
+        $stmt->execute([$ticketId]);
+        $ticket = $stmt->fetch();
+
+        if (!$ticket) {
+            http_response_code(404);
+            return;
+        }
+
+        if ($isProcessor) {
+            $stmt = $this->db->prepare("UPDATE tickets SET status = 'resolved_by_staff', updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$ticketId]);
+            echo json_encode(['status' => 'resolved']);
+        } 
+        elseif ((int)$ticket['created_by'] === (int)$user['id']) {
+            $stmt = $this->db->prepare("DELETE FROM tickets WHERE id = ?");
+            $stmt->execute([$ticketId]);
+            echo json_encode(['status' => 'deleted']);
+        } 
+        else {
+            http_response_code(403);
+        }
+    }
+
+    public function cleanupOldTickets() {
+        if (!$this->isTicketProcessor()) {
+            http_response_code(403);
+            return;
+        }
+
+        $stmt = $this->db->prepare("
+            DELETE FROM tickets 
+            WHERE status = 'resolved_by_staff' 
+            AND updated_at < DATE_SUB(NOW(), INTERVAL 7 DAY)
+        ");
+        $stmt->execute();
+        echo json_encode(['status' => 'success', 'deleted_count' => $stmt->rowCount()]);
+    }
+
     private function decryptResults(array $results, string $sourceKey, string $targetKey): array {
         foreach ($results as &$item) {
             if (!empty($item[$sourceKey])) {
@@ -188,11 +297,15 @@ public function createTicket() {
         return $results;
     }
 
-    /**
-     * Summary of mapCategoryToMail
-     * @param string $cat
-     * @return string
-     */
+    private function isTicketProcessor(): bool {
+        // Falls AuthMiddleware::isTicketProcessor() existiert, nutze diese, sonst die lokale Logik
+        if (method_exists(AuthMiddleware::class, 'isTicketProcessor')) {
+            return AuthMiddleware::isTicketProcessor();
+        }
+        $userGroups = $_SESSION['user_groups'] ?? []; 
+        return in_array($_ENV['MHB_BE_MSAL_TICKETPROCESSORS'], $userGroups);
+    }
+
     private function mapCategoryToMail(string $cat): string {
         return match($cat) {
             'network'  => $_ENV['TICKET_MAIL_NETWORK'],

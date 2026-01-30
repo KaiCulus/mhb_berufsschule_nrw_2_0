@@ -24,7 +24,7 @@ function configureSecureSession(): void
     session_set_cookie_params([
         'lifetime' => 86400,
         'path' => '/',
-        'domain' => $domain, 
+        'domain' => $domain,
         'secure' => true,
         'httponly' => true,
         'samesite' => 'None' // Wichtig für Cross-Origin (Lokal HTTPS erforderlich!)
@@ -105,6 +105,9 @@ function handleRequest(): void
             ],
             'api/tickets/subscribe' => ['POST' => 'handleToggleTicketSubscription'],
             'api/tickets/comment' => ['POST' => 'handleAddTicketComment'],
+            'api/tickets/update-field' => ['POST' => 'handleUpdateTicketField'],
+            'api/tickets/resolve'      => ['POST' => 'handleResolveTicket'],
+            'api/tickets/cleanup'      => ['POST' => 'handleCleanupOldTickets'],
         ];
 
         // Statische Routen prüfen
@@ -293,9 +296,7 @@ function handleToggleAliasVote(): void
 /**
  * HANDLER FÜR TICKETS
  */
-/**
- * HANDLER FÜR TICKETS
- */
+
 
 function handleCreateTicket(): void {
     header('Content-Type: application/json');
@@ -326,6 +327,23 @@ function handleAddTicketComment(): void {
     header('Content-Type: application/json');
     (new \Kai\MhbBackend20\Database\Controllers\TicketController())->addComment();
 }
+
+function handleUpdateTicketField(): void {
+    header('Content-Type: application/json');
+    (new \Kai\MhbBackend20\Database\Controllers\TicketController())->updateField();
+}
+
+function handleResolveTicket(): void {
+    header('Content-Type: application/json');
+    (new \Kai\MhbBackend20\Database\Controllers\TicketController())->resolveTicket();
+}
+
+function handleCleanupOldTickets(): void {
+    header('Content-Type: application/json');
+    (new \Kai\MhbBackend20\Database\Controllers\TicketController())->cleanupOldTickets();
+}
+
+
 
 /**
  * Hilfsfunktionen

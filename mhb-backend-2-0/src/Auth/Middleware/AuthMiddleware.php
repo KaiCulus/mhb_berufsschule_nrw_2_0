@@ -101,6 +101,12 @@ class AuthMiddleware {
         }
     }
 
+    public static function isTicketProcessor(): bool {
+        $user = self::check();
+        $requiredGroupId = $_ENV['MHB_BE_MSAL_TICKETPROCESSORS'] ?? null;
+        return in_array($requiredGroupId, $_SESSION['user_groups'] ?? []);
+    }
+
     private static function respondError(int $code, string $message): void {
         http_response_code($code);
         header('Content-Type: application/json');

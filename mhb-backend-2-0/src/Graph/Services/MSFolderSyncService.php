@@ -13,7 +13,7 @@ class MSFolderSyncService {
     public function __construct(GraphClient $graphClient) {
         $this->db = DB::getInstance()->getConnection();
         $this->graphClient = $graphClient;
-        $config = require __DIR__ . '/../../../config/graph.php';
+        $config = require_once __DIR__ . '/../../../config/graph.php';
         $this->profiles = $config['sync_profiles'] ?? [];
     }
 

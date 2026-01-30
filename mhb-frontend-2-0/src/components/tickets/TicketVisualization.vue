@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue';
 import axios from '@/scripts/axios';
 import { useAuthStore } from '@/stores/authentification/auth';
-
+import TicketDetailsMain from '@/components/tickets/TicketVisualizationComponents/TicketDetailsMain.vue';
 const props = defineProps({
   mode: { 
     type: String, 
@@ -15,6 +15,7 @@ const authStore = useAuthStore();
 const tickets = ref([]);
 const loading = ref(true);
 const searchQuery = ref('');
+const selectedTicketId = ref(null);
 
 const fetchTickets = async () => {
   loading.value = true;
@@ -84,12 +85,20 @@ onMounted(fetchTickets);
         </div>
 
         <div class="card-footer">
-          <router-link :to="`/tickets/detail/${ticket.id}`" class="detail-btn">
+          <button @click="selectedTicketId = ticket.id" class="detail-btn-action">
             Details ansehen
-          </router-link>
+          </button>
         </div>
+        
+        
       </div>
     </div>
+    <TicketDetailsMain 
+      v-if="selectedTicketId" 
+      :ticket-id="selectedTicketId" 
+      @close="selectedTicketId = null"
+      @refresh="fetchTickets"
+    />
 
     <div v-if="!loading && filteredTickets.length === 0" class="no-data">
       Keine Tickets gefunden.

@@ -25,7 +25,7 @@ return [
     | Sync Profiles
     |--------------------------------------------------------------------------
     | Hier definierst du die verschiedenen SharePoint-Bereiche.
-    | Der TeamsSyncService nutzt diese Keys (z.B. 'verwaltung'), um 
+    | Der TeamsSyncService nutzt diese Keys (z.B. 'verwaltung'), um
     | die entsprechenden Ordner rekursiv zu scannen.
     */
     'sync_profiles' => [

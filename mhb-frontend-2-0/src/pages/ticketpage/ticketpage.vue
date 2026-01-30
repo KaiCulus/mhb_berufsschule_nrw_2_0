@@ -25,7 +25,7 @@ const toggleForm = () => {
 
     <transition name="fade-slide">
       <div v-if="showForm" class="form-wrapper">
-        <TicketFormMain />
+        <TicketFormMain @created="showForm = false" />
       </div>
     </transition>
 

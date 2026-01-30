@@ -96,6 +96,11 @@
 │   │   │       │   ├── TicketPriorityInfo.vue
 │   │   │       │   └── TicketTypeSelect.vue
 │   │   │       ├── TicketFormMain.vue
+│   │   │       ├── TicketVisualizationComponents
+│   │   │       │   ├── TicketDetailsMain.vue
+│   │   │       │   └── TicketVisualizationSubComponents
+│   │   │       │       ├── TicketNotes.vue
+│   │   │       │       └── TicketSubscription.vue
 │   │   │       └── TicketVisualization.vue
 │   │   ├── main.js
 │   │   ├── pages
@@ -128,4 +133,4 @@
 │   └── vite.config.js
 └── structure.txt
 
-59 directories, 70 files
+61 directories, 73 files

@@ -1,5 +1,8 @@
 <script setup>
-const props = defineProps(['modelValue']);
+const props = defineProps({
+  modelValue: String,
+  isReadonly: Boolean // Neu hinzugefügt
+});
 const emit = defineEmits(['update:modelValue']);
 
 // Definition der Prioritätsstufen mit Farben und Beschreibungen
@@ -38,21 +41,21 @@ const priorities = [
 </script>
 
 <template>
-  <div class="priority-container">
+  <div class="priority-container" :class="{ 'readonly-mode': isReadonly }">
     <label>Dringlichkeit</label>
     <div class="priority-grid">
       <div 
         v-for="p in priorities" 
         :key="p.value"
         class="priority-card"
-        :class="{ active: modelValue === p.value }"
+        :class="{ active: modelValue === p.value, 'disabled': isReadonly && modelValue !== p.value }"
         :style="{ '--brand-color': p.color }"
-        @click="emit('update:modelValue', p.value)"
+        @click="!isReadonly && emit('update:modelValue', p.value)"
       >
-        <div class="radio-circle"></div>
+        <div class="radio-circle" v-if="!isReadonly || modelValue === p.value"></div>
         <div class="content">
           <span class="p-label">{{ p.label }}</span>
-          <p class="p-desc">{{ p.desc }}</p>
+          <p class="p-desc" v-if="!isReadonly">{{ p.desc }}</p>
         </div>
       </div>
     </div>
@@ -119,6 +122,15 @@ label { font-size: 0.9rem; font-weight: bold; display: block; margin-bottom: 10p
   height: 6px;
   background: var(--brand-color);
   border-radius: 50%;
+}
+
+.priority-card.disabled { 
+  display: none; /* Verstecke alle nicht gewählten Prioritäten im Readonly-Modus */
+}
+.readonly-mode .priority-card.active {
+  cursor: default;
+  border-width: 1px;
+  box-shadow: none;
 }
 
 .p-label { font-weight: bold; font-size: 0.85rem; display: block; color: #333; }

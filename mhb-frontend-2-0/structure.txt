@@ -47,7 +47,16 @@
 │   │   ├── testcomponents
 │   │   └── tickets
 │   │       ├── TicketFormComponents
-│   │       └── TicketFormMain.vue
+│   │       │   ├── TicketLocationInput.vue
+│   │       │   ├── TicketPriorityInfo.vue
+│   │       │   └── TicketTypeSelect.vue
+│   │       ├── TicketFormMain.vue
+│   │       ├── TicketVisualizationComponents
+│   │       │   ├── TicketDetailsMain.vue
+│   │       │   └── TicketVisualizationSubComponents
+│   │       │       ├── TicketNotes.vue
+│   │       │       └── TicketSubscription.vue
+│   │       └── TicketVisualization.vue
 │   ├── main.js
 │   ├── pages
 │   │   ├── dashboardpage
@@ -78,4 +87,4 @@
 ├── structure.txt
 └── vite.config.js
 
-38 directories, 41 files
+40 directories, 48 files

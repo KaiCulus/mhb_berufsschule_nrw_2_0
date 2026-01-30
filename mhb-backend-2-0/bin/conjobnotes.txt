@@ -1,0 +1,2 @@
+Die Methode resolveTicket() aus TicketController.php muss als Cronjob angelegt werden.
+Genauso wei console-sync.php
