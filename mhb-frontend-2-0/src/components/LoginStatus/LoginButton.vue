@@ -3,7 +3,7 @@
   import { storeToRefs } from 'pinia';
 
   const auth = useAuthStore();
-  const { isLoggedIn, isLoading } = storeToRefs(auth);
+  const { isLoading } = storeToRefs(auth);
 
   const login = async () => {
     try {

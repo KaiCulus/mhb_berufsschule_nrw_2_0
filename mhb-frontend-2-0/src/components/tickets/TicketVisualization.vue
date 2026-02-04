@@ -16,6 +16,13 @@ const tickets = ref([]);
 const loading = ref(true);
 const searchQuery = ref('');
 const selectedTicketId = ref(null);
+const selectedCategory = ref('all');
+const categories = [
+  { value: 'all', label: 'Alle Kategorien' },
+  { value: 'network', label: 'Netzwerk' },
+  { value: 'it_support', label: 'IT-Support' },
+  { value: 'facility', label: 'Gebäude/Hausmeister' }
+];
 
 const fetchTickets = async () => {
   loading.value = true;
@@ -43,13 +50,22 @@ const statusConfig = {
 };
 
 const filteredTickets = computed(() => {
-  if (!searchQuery.value) return tickets.value;
-  const q = searchQuery.value.toLowerCase();
-  return tickets.value.filter(t => 
-    t.title.toLowerCase().includes(q) || 
-    t.room?.toLowerCase().includes(q) ||
-    t.creator_name?.toLowerCase().includes(q)
-  );
+  let result = tickets.value;
+  // Erst nach Kategorie filtern
+  if (selectedCategory.value !== 'all') {
+    result = result.filter(t => t.category === selectedCategory.value);
+  }
+  // Dann nach Suchbegriff filtern
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    result = result.filter(t => 
+      t.title.toLowerCase().includes(q) || 
+      t.room?.toLowerCase().includes(q) ||
+      t.creator_name?.toLowerCase().includes(q)
+    );
+  }
+
+  return result;
 });
 
 onMounted(fetchTickets);
@@ -64,6 +80,11 @@ onMounted(fetchTickets);
         placeholder="Tickets durchsuchen (Titel, Raum, Name)..." 
         class="search-bar"
       />
+      <select v-model="selectedCategory" class="category-select">
+        <option v-for="cat in categories" :key="cat.value" :value="cat.value">
+          {{ cat.label }}
+        </option>
+      </select>
       <button @click="fetchTickets" class="refresh-btn">🔄</button>
     </div>
 
@@ -107,26 +128,85 @@ onMounted(fetchTickets);
 </template>
 
 <style scoped>
-.visualization-wrapper { width: 100%; }
+.visualization-wrapper {
+  width: 100%;
+}
 
-.controls { display: flex; gap: 10px; margin-bottom: 20px; }
-.search-bar { flex-grow: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
+/* 1. Basis-Styles (Mobile First) */
+.controls {
+  display: flex;
+  flex-direction: column; /* Untereinander auf dem Handy */
+  gap: 12px;
+  margin-bottom: 20px;
+}
 
+.search-bar, 
+.category-select {
+  width: 100%; /* Volle Breite auf dem Handy */
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 16px; /* Verhindert automatisches Zoomen auf iOS */
+}
+
+.refresh-btn {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: #f8f9fa;
+  cursor: pointer;
+  align-self: flex-end; /* Button rechtsbündig auf Mobile */
+}
+
+/* Ticket Grid: Standardmäßig einspaltig */
 .ticket-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: 1fr; 
+  gap: 16px;
 }
 
+/* 2. Tablet & Desktop (Breakpoints hinzufügen) */
+@media (min-width: 768px) {
+  .controls {
+    flex-direction: row; /* Nebeneinander ab Tablet */
+    align-items: center;
+  }
+
+  .search-bar {
+    flex-grow: 1;
+  }
+
+  .category-select {
+    width: auto;
+    min-width: 200px;
+  }
+
+  .ticket-grid {
+    /* Zwei Spalten ab Tablet-Breite */
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .ticket-grid {
+    /* Drei oder mehr Spalten auf großen Monitoren */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+/* Gemeinsame Card-Styles (gelten für alle Breiten) */
 .ticket-card {
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s;
+  transition: transform 0.2s ease;
 }
-.ticket-card:hover { transform: translateY(-3px); }
+
+.ticket-card:hover {
+  transform: translateY(-4px);
+}
 
 .card-header {
   padding: 10px 15px;
@@ -142,7 +222,6 @@ onMounted(fetchTickets);
 .card-body h3 { margin: 0 0 10px 0; font-size: 1.1rem; }
 .location { font-size: 0.9rem; color: #555; margin-bottom: 5px; }
 .meta { font-size: 0.75rem; color: #888; }
-
 .card-footer { padding: 10px 15px; border-top: 1px solid #eee; }
 .detail-btn { 
   display: block; text-align: center; color: #0e64a6; 

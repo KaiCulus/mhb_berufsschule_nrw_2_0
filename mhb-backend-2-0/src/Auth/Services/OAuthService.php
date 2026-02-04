@@ -8,38 +8,33 @@ use Kai\MhbBackend20\Auth\Exceptions\OAuthException;
 class OAuthService {
     
     /**
-     * Validiert das ID-Token von Microsoft und prüft die Gruppenmitgliedschaft.
+     * Validiert das ID-Token und stellt sicher, dass Gruppen geladen sind.
      */
-    public function validateIdToken(string $idToken): array
+    public function validateIdToken(string $idToken, ?string $accessToken = null): array
     {
         try {
             $publicKey = $this->getMicrosoftPublicKey($idToken);
             $key = new Key($publicKey, 'RS256');
             $decoded = JWT::decode($idToken, $key);
 
-            // Standard Validierungen
-            if (!isset($decoded->iss) || strpos($decoded->iss, $_ENV['MHB_BE_MSAL_TENANT_ID']) === false) {
-                throw new OAuthException('Invalid issuer claim', 401);
-            }
-            if (!isset($decoded->aud) || $decoded->aud !== $_ENV['MHB_BE_MSAL_CLIENT_ID']) {
-                throw new OAuthException('Invalid audience claim', 401);
-            }
-            if (!isset($decoded->exp) || $decoded->exp < time()) {
-                throw new OAuthException('Token has expired', 401);
-            }
-
-            // NEU: Gruppenprüfung (Säule 1 - Authorization)
             $userData = (array)$decoded;
-            $this->validateGroupMembership($userData);
 
-            error_log("JWT & Group Validation successful for: " . ($userData['email'] ?? $userData['upn'] ?? 'unknown'));
-            
+            // 1. Standard Claims prüfen
+            $this->validateClaims($userData);
+
+            // 2. Gruppen-Fallback: Falls 'groups' im Token fehlt (Overage), via Graph holen
+            if (!isset($userData['groups']) && $accessToken) {
+                error_log("Overage erkannt oder Gruppen fehlen im Token. Rufe Graph API auf...");
+                $userData['groups'] = $this->fetchUserGroupsFromGraph($accessToken);
+            }
+
+            // 3. Harte Zugangsprüfung (Lehrer-Gruppe)
+            $this->validateGroupMembership($userData);
             return $userData;
 
         } catch (\Firebase\JWT\ExpiredException $e) {
             throw new OAuthException('Token expired: ' . $e->getMessage(), 401);
         } catch (OAuthException $e) {
-            // Re-throw OAuthExceptions (wie Group Validation) damit der Code erhalten bleibt
             throw $e;
         } catch (\Exception $e) {
             error_log("Token validation failed: " . $e->getMessage());
@@ -48,22 +43,52 @@ class OAuthService {
     }
 
     /**
-     * Prüft, ob die erforderliche Group-ID im Token vorhanden ist.
+     * Holt Gruppen direkt von Microsoft Graph (für Overage-Szenarien)
      */
+    public function fetchUserGroupsFromGraph(string $accessToken): array 
+    {
+        $url = 'https://graph.microsoft.com/v1.0/me/memberOf?$select=id';
+        
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $accessToken,
+            'Accept: application/json'
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            error_log("Graph API Error: " . $response);
+            return [];
+        }
+
+        $data = json_decode($response, true);
+        return array_map(fn($g) => $g['id'], $data['value'] ?? []);
+    }
+
+    private function validateClaims(array $data): void
+    {
+        if (!isset($data['iss']) || strpos($data['iss'], $_ENV['MHB_BE_MSAL_TENANT_ID']) === false) {
+            throw new OAuthException('Invalid issuer', 401);
+        }
+        if (!isset($data['aud']) || $data['aud'] !== $_ENV['MHB_BE_MSAL_CLIENT_ID']) {
+            throw new OAuthException('Invalid audience', 401);
+        }
+    }
+
     private function validateGroupMembership(array $userData): void
     {
         $requiredGroup = $_ENV['MHB_BE_MSAL_TEACHER_ACCESS_GROUP'] ?? null;
-        
-        // Wenn keine Gruppe in der ENV definiert ist, lassen wir alle durch (optional)
-        // oder werfen einen Fehler (sicherer).
-        if (!$requiredGroup) {
-            error_log("WARNUNG: MHB_BE_MSAL_TEACHER_ACCESS_GROUP ist nicht in der .env definiert!");
-            return; 
-        }
+        if (!$requiredGroup) return;
 
-        if (!isset($userData['groups']) || !in_array($requiredGroup, $userData['groups'])) {
-            error_log("Zugriff verweigert: User ist nicht Mitglied der erforderlichen Gruppe.");
-            throw new OAuthException('Forbidden: User does not have the required group membership.', 403);
+        $userGroups = $userData['groups'] ?? [];
+
+        if (!in_array($requiredGroup, $userGroups)) {
+           
+            throw new OAuthException('Forbidden: Missing required group membership.', 403);
         }
     }
 
@@ -76,25 +101,17 @@ class OAuthService {
         $tokenHeader = json_decode(base64_decode($tokenParts[0]), true);
         $kid = $tokenHeader['kid'] ?? null;
 
-        if (!$kid) throw new \RuntimeException('No kid found in ID Token header');
+        if (!$kid) throw new \RuntimeException('No kid found in header');
 
-        $ch = curl_init($keysUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json']);
-        $response = curl_exec($ch);
+        $response = file_get_contents($keysUrl); // Einfacherer Abruf als cURL für GET
         $keys = json_decode($response, true);
-        curl_close($ch);
 
-        $selectedCert = null;
         foreach ($keys['keys'] as $keyData) {
             if ($keyData['kid'] === $kid) {
-                $selectedCert = $keyData['x5c'][0];
-                break;
+                return "-----BEGIN CERTIFICATE-----\n" . chunk_split($keyData['x5c'][0], 64) . "-----END CERTIFICATE-----";
             }
         }
 
-        if (!$selectedCert) throw new \RuntimeException("No matching public key found");
-
-        return "-----BEGIN CERTIFICATE-----\n" . chunk_split($selectedCert, 64) . "-----END CERTIFICATE-----";
+        throw new \RuntimeException("No matching public key found");
     }
 }

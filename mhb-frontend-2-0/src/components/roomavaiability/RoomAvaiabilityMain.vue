@@ -27,7 +27,7 @@ const fetchBookings = async () => {
     const response = await axios.get('/api/rooms/bookings', {
       params: { start, end }
     });
-    bookings.value = response.data.data;
+    bookings.value = response.data;
   } catch (error) {
     console.error("Fehler beim Laden der Raumdaten", error);
   } finally {

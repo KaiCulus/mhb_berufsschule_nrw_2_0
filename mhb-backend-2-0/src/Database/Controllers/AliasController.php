@@ -1,15 +1,18 @@
 <?php
+
 namespace Kai\MhbBackend20\Database\Controllers;
 
+use Kai\MhbBackend20\Common\BaseController;
 use Kai\MhbBackend20\Database\DB;
 use PDO;
 
-class AliasController {
+class AliasController extends BaseController {
+    
     /**
-     * Holt alle Aliase für ein Dokument inklusive Voting-Statistiken.
+     * GET api/aliases/{docId}/{userId}
+     * Parameter kommen via Router (Regex-Matches)
      */
     public function getAliases($docId, $userId) {
-        // Wir holen die PDO-Verbindung über getConnection()
         $db = DB::getInstance()->getConnection();
         
         $stmt = $db->prepare("
@@ -23,48 +26,73 @@ class AliasController {
         
         $stmt->execute([
             'docId' => $docId, 
-            'userId' => $userId
+            'userId' => (int)$userId
         ]);
         
-        return $stmt->fetchAll();
+        $this->jsonResponse($stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
     /**
-     * Fügt einen neuen Namensvorschlag (Alias) hinzu.
+     * POST api/aliases
      */
-    public function addAlias($docId, $aliasText, $userId) {
+    public function addAlias() {
+        // Nutzen der neuen Validierung aus dem BaseController
+        $data = $this->validateRequest([
+            'docId'     => 'string',
+            'aliasText' => 'string',
+            'userId'    => 'int'
+        ]);
+
         $db = DB::getInstance()->getConnection();
         
+        // Input bereinigen (XSS Schutz für den Alias-Text)
+        $cleanAlias = $this->sanitize($data['aliasText']);
+
         $stmt = $db->prepare("
             INSERT INTO document_aliases (document_ms_id, alias_text, created_by) 
             VALUES (?, ?, ?)
         ");
         
-        $stmt->execute([$docId, $aliasText, $userId]);
+        $stmt->execute([
+            $data['docId'], 
+            $cleanAlias, 
+            (int)$data['userId']
+        ]);
         
-        return $db->lastInsertId();
+        $this->jsonResponse([
+            'status' => 'success', 
+            'id' => $db->lastInsertId()
+        ], 201);
     }
 
     /**
-     * Schaltet den Vote eines Nutzers für einen Alias an oder aus (Toggle).
+     * POST api/aliases/vote
      */
-    public function toggleVote($aliasId, $userId) {
+    public function toggleVote() {
+        // Validierung der IDs
+        $data = $this->validateRequest([
+            'aliasId' => 'int',
+            'userId'  => 'int'
+        ]);
+
         $db = DB::getInstance()->getConnection();
+        $aliasId = (int)$data['aliasId'];
+        $userId  = (int)$data['userId'];
         
-        // Check ob Vote bereits in der Tabelle alias_votes existiert
+        // Check ob Vote bereits existiert
         $stmt = $db->prepare("SELECT 1 FROM alias_votes WHERE alias_id = ? AND user_id = ?");
         $stmt->execute([$aliasId, $userId]);
         
         if ($stmt->fetch()) {
-            // Wenn vorhanden: Entfernen
+            // Toggle Off
             $stmt = $db->prepare("DELETE FROM alias_votes WHERE alias_id = ? AND user_id = ?");
             $stmt->execute([$aliasId, $userId]);
-            return ['action' => 'removed'];
+            $this->jsonResponse(['action' => 'removed']);
         } else {
-            // Wenn nicht vorhanden: Hinzufügen
+            // Toggle On
             $stmt = $db->prepare("INSERT INTO alias_votes (alias_id, user_id) VALUES (?, ?)");
             $stmt->execute([$aliasId, $userId]);
-            return ['action' => 'added'];
+            $this->jsonResponse(['action' => 'added'], 201);
         }
     }
 }

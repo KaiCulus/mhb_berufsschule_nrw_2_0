@@ -2,11 +2,19 @@
 
 namespace Kai\MhbBackend20\Database\Controllers;
 
+use Kai\MhbBackend20\Common\BaseController;
 use Kai\MhbBackend20\Database\DB;
 use Kai\MhbBackend20\Auth\Middleware\AuthMiddleware;
 use PDO;
 
-class DocumentController {
+class DocumentController extends BaseController {
+    
+    // 1. Rollen-Mapping für die Scopes
+    private const SCOPE_PERMISSIONS = [
+        'verwaltung' => 'MHB_BE_MSAL_ADMIN_VERWALTUNG',
+        'studium'    => 'MHB_BE_MSAL_ADMIN_STUDIUM'
+    ];
+
     private $db;
 
     public function __construct() {
@@ -14,14 +22,19 @@ class DocumentController {
     }
 
     /**
+     * GET api/documents/{scope}
      * Holt alle aktiven Dokumente eines Scopes inklusive ihrer Aliase.
      */
     public function getByScope(string $scope) {
-        // Sicherheit: Nur authentifizierte User dürfen Daten sehen
+        // 2. Sicherheit: Authentifizierung prüfen
         AuthMiddleware::check();
 
-        // Wir nutzen GROUP_CONCAT, um alle Aliase für die Suche in einem Feld zu sammeln
-        // Die Aliase werden nur einbezogen, wenn sie mindestens 1 Vote haben
+        // 3. Berechtigungs-Check: Falls der Scope geschützt ist, Gruppe erzwingen
+        if (isset(self::SCOPE_PERMISSIONS[$scope])) {
+            $this->requireGroup(self::SCOPE_PERMISSIONS[$scope]);
+        }
+
+        // 4. Datenbankabfrage
         $stmt = $this->db->prepare("
             SELECT 
                 d.ms_id, 
@@ -46,17 +59,15 @@ class DocumentController {
         $stmt->execute(['scope' => $scope]);
         $docs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Nachbearbeitung: Alias-String in ein Array umwandeln für das Frontend
+        // 5. Nachbearbeitung (Transformation)
         foreach ($docs as &$doc) {
-            if (!empty($doc['alias_list'])) {
-                $doc['aliases'] = explode('||', $doc['alias_list']);
-            } else {
-                $doc['aliases'] = [];
-            }
-            unset($doc['alias_list']); // Temporäres Hilfsfeld entfernen
+            $doc['aliases'] = !empty($doc['alias_list']) 
+                ? explode('||', $doc['alias_list']) 
+                : [];
+            unset($doc['alias_list']); 
         }
 
-        header('Content-Type: application/json');
-        echo json_encode($docs);
+        // 6. Einheitliche Antwort
+        $this->jsonResponse($docs);
     }
 }

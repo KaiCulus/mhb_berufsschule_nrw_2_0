@@ -2,59 +2,69 @@
 
 namespace Kai\MhbBackend20\Database\Controllers;
 
+use Kai\MhbBackend20\Common\BaseController;
 use Kai\MhbBackend20\Database\DB;
+use Kai\MhbBackend20\Auth\Middleware\AuthMiddleware;
 use PDO;
 
-class FavoriteController {
+class FavoriteController extends BaseController {
+    
+    private $db;
+
+    public function __construct() {
+        $this->db = DB::getInstance()->getConnection();
+    }
+
     /**
-     * Holt alle Favoriten-IDs für einen bestimmten User
+     * GET api/favorites
+     * Holt alle Favoriten-IDs für den aktuell eingeloggten User
      */
-    public function getFavorites($userId) {
-        $db = DB::getInstance()->getConnection();
-        $stmt = $db->prepare("SELECT document_ms_id FROM user_favorites WHERE user_id = ?");
-        $stmt->execute([$userId]);
+    public function getFavorites() {
+        // Authentifizierung prüfen und User-Daten holen
+        $user = AuthMiddleware::check();
         
-        // Wir geben nur ein flaches Array der IDs zurück: ["ID1", "ID2"]
+        $stmt = $this->db->prepare("SELECT document_ms_id FROM user_favorites WHERE user_id = ?");
+        $stmt->execute([$user['id']]);
+        
+        // FETCH_COLUMN gibt uns direkt das flache Array ["ID1", "ID2"]
         $favorites = $stmt->fetchAll(PDO::FETCH_COLUMN);
         
-        header('Content-Type: application/json');
-        echo json_encode($favorites);
+        $this->jsonResponse($favorites);
     }
 
     /**
-     * Fügt einen Favoriten hinzu (POST)
+     * POST api/favorites
+     * Fügt einen Favoriten für den aktuellen User hinzu
      */
     public function addFavorite() {
-        $data = json_decode(file_get_contents('php://input'), true);
-        $userId = $data['userId'] ?? null;
-        $docId = $data['docId'] ?? null;
+        $user = AuthMiddleware::check();
+        
+        // Validierung via BaseController (erwartet docId im Body)
+        $data = $this->validateRequest([
+            'docId' => 'string'
+        ]);
 
-        if (!$userId || !$docId) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing data']);
-            return;
-        }
+        // INSERT IGNORE verhindert Dubletten ohne Fehlermeldung
+        $stmt = $this->db->prepare("INSERT IGNORE INTO user_favorites (user_id, document_ms_id) VALUES (?, ?)");
+        $stmt->execute([$user['id'], $data['docId']]);
 
-        $db = DB::getInstance()->getConnection();
-        // IGNORE verhindert Fehler, falls der Favorit bereits existiert
-        $stmt = $db->prepare("INSERT IGNORE INTO user_favorites (user_id, document_ms_id) VALUES (?, ?)");
-        $stmt->execute([$userId, $docId]);
-
-        echo json_encode(['success' => true]);
+        $this->jsonResponse(['success' => true, 'added' => $data['docId']]);
     }
 
     /**
-     * Entfernt einen Favoriten (DELETE)
+     * DELETE api/favorites
+     * Entfernt einen Favoriten für den aktuellen User
      */
     public function removeFavorite() {
-        $data = json_decode(file_get_contents('php://input'), true);
-        $userId = $data['userId'] ?? null;
-        $docId = $data['docId'] ?? null;
+        $user = AuthMiddleware::check();
+        
+        // Da DELETE oft keine Bodys hat, prüfen wir hier beides: 
+        // Entweder via validateRequest (Body) oder getQueryParam (URL)
+        $docId = $this->validateRequest(['docId' => 'string'])['docId'];
 
-        $db = DB::getInstance()->getConnection();
-        $stmt = $db->prepare("DELETE FROM user_favorites WHERE user_id = ? AND document_ms_id = ?");
-        $stmt->execute([$userId, $docId]);
+        $stmt = $this->db->prepare("DELETE FROM user_favorites WHERE user_id = ? AND document_ms_id = ?");
+        $stmt->execute([$user['id'], $docId]);
 
-        echo json_encode(['success' => true]);
+        $this->jsonResponse(['success' => true, 'removed' => $docId]);
     }
 }

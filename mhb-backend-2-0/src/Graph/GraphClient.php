@@ -11,9 +11,15 @@ class GraphClient {
     private array $config;
 
     public function __construct() {
-        // Lädt die globale Graph-Konfiguration
-        $this->config = require_once __DIR__ . '/../../config/graph.php';
-        $baseUrl = rtrim($this->config['base_url'],'/') . '/';
+        $configPath = ROOT_PATH . '/config/graph.php'; // Nutze die Konstante aus der index.php
+        
+        if (!file_exists($configPath)) {
+            throw new \Exception("Konfigurationsdatei nicht gefunden: $configPath");
+        }
+
+        $this->config = require $configPath; // IMMER require nutzen für Config-Arrays!
+        
+        $baseUrl = rtrim($this->config['base_url'], '/') . '/';
         $this->httpClient = new Client([
             'base_uri' => $baseUrl,
             'timeout'  => $this->config['request_timeout'] ?? 30.0,

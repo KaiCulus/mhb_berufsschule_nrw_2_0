@@ -54,14 +54,15 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
 
-  // 1. Prüfen, ob wir gerade vom OAuth-Callback kommen (URL-Params checken)
-  await authStore.checkAuthOnLoad();
+  // Nur prüfen, wenn wir noch nicht wissen, dass wir eingeloggt sind
+  if (!authStore.isLoggedIn) {
+    await authStore.checkAuthOnLoad();
+  }
 
-  // 2. Route Protection
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-    next('/'); // Nicht eingeloggt -> Zurück zum Login
+    next('/'); 
   } else {
-    next(); // Alles ok
+    next();
   }
 });
 

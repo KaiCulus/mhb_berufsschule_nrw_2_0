@@ -37,40 +37,33 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async checkAuthOnLoad() {
-      const params = new URLSearchParams(window.location.search);
-      const accessToken = params.get('access_token');
-      const idToken = params.get('id_token');
-      const dbId = params.get('db_id');
-      const userRaw = params.get('user');
-
-      if (accessToken && idToken && userRaw) {
-        try {
-          this.accessToken = accessToken;
-          this.idToken = idToken;
-          this.dbId = dbId;
-          this.user = JSON.parse(decodeURIComponent(userRaw));
+    async checkSession() {
+      try {
+        // Wir rufen einen neuen Endpunkt auf, den wir gleich im PHP erstellen
+        const response = await axios.get(`${BACKEND_URL}/api/me`, {
+          withCredentials: true
+        });
+        
+        if (response.data.id) {
+          this.user = response.data.user;
+          this.dbId = response.data.id;
           this.isLoggedIn = true;
-
-          // Nach erfolgreichem URL-Login sofort Berechtigungen laden
-          await this.fetchPermissions();
-
-          window.history.replaceState({}, document.title, window.location.pathname);
+          this.permissions = response.data.permissions;
           return true;
-        } catch (e) {
-          console.error('Fehler beim Parsen der Login-Daten:', e);
-          return false;
         }
+      } catch (error) {
+        this.isLoggedIn = false;
+        return false;
       }
-
-      // Falls bereits eingeloggt (via Persist), Permissions aktualisieren
-      if (this.idToken && this.user) {
-         this.isLoggedIn = true;
-         this.fetchPermissions(); // Läuft im Hintergrund
-         return true;
-      }
-
       return false;
+    },
+
+    async checkAuthOnLoad() {
+      // 1. Erstmal schauen, ob wir noch Daten im LocalStorage (Persist) haben
+      if (this.isLoggedIn && this.user) return true;
+
+      // 2. Wenn nicht, das Backend nach der Session fragen
+      return await this.checkSession();
     },
 
     async logout() {
@@ -80,6 +73,8 @@ export const useAuthStore = defineStore('auth', {
       this.accessToken = null;
       this.idToken = null;
       this.permissions = {};
+      this.$reset(); 
+      localStorage.clear();
 
       window.location.href = `${BACKEND_URL}/oauth/logout`;
     },
