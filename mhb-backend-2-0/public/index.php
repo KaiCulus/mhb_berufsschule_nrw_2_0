@@ -108,6 +108,7 @@ function handleRequest(): void
             'api/tickets/update-field' => ['POST' => 'handleUpdateTicketField'],
             'api/tickets/resolve'      => ['POST' => 'handleResolveTicket'],
             'api/tickets/cleanup'      => ['POST' => 'handleCleanupOldTickets'],
+            'api/rooms/bookings' => ['GET' => 'handleGetRoomBookings'],
         ];
 
         // Statische Routen prüfen
@@ -343,7 +344,12 @@ function handleCleanupOldTickets(): void {
     (new \Kai\MhbBackend20\Database\Controllers\TicketController())->cleanupOldTickets();
 }
 
-
+/**
+ * Handler Für Raumbuchung:
+ */
+function handleGetRoomBookings(): void {
+    (new \Kai\MhbBackend20\Graph\Controllers\RaumbuchungsUebersichtController())->getOverview();
+}
 
 /**
  * Hilfsfunktionen

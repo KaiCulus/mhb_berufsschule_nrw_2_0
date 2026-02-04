@@ -8,6 +8,7 @@ import TicketLocationInput from '@/components/tickets/TicketFormComponents/Ticke
 import TicketPriorityInfo from '@/components/tickets/TicketFormComponents/TicketPriorityInfo.vue';
 import TicketTitleInput from '@/components/tickets/TicketFormComponents/TicketTitleInput.vue';
 import TicketTypeSelect from '@/components/tickets/TicketFormComponents/TicketTypeSelect.vue';
+import TicketStatusSelect from '@/components/tickets/TicketVisualizationComponents/TicketVisualizationSubComponents/TicketStatusSelect.vue';
 
 const props = defineProps({
   ticketId: { type: Number, required: true }
@@ -82,6 +83,11 @@ onMounted(fetchDetails);
       <div class="modal-body">
         <div class="details-grid">
         <section class="info-section">
+            <TicketStatusSelect 
+              v-model="ticket.status"
+              :is-readonly="!ticket.can_edit_status"
+              @update:modelValue="updateField('status', $event)"
+            />
             <div class="meta-info">
             <p><strong>Erstellt von:</strong> {{ ticket.creator_name }}</p>
             <p><strong>Datum:</strong> {{ new Date(ticket.created_at).toLocaleString('de-DE') }}</p>

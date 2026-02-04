@@ -199,6 +199,15 @@ class TicketController {
             $user['id'], 
             $data['comment']
         ]);
+        $stmtTicket = $this->db->prepare("SELECT title FROM tickets WHERE id = ?");
+        $stmtTicket->execute([$data['ticketId']]);
+        $t = $stmtTicket->fetch();
+
+        $this->notifySubscribers(
+            (int)$data['ticketId'], 
+            $t['title'], 
+            "Neue Notiz von <b>{$user['name']}</b>: <br><i>" . nl2br(htmlspecialchars($data['comment'])) . "</i>"
+        );
 
         echo json_encode(['status' => 'success']);
     }
@@ -210,8 +219,7 @@ class TicketController {
         $user = AuthMiddleware::check();
         $data = json_decode(file_get_contents('php://input'), true);
         
-        // Sicherheits-Check: Darf der User dieses Ticket überhaupt anfassen?
-        $stmtCheck = $this->db->prepare("SELECT created_by FROM tickets WHERE id = ?");
+        $stmtCheck = $this->db->prepare("SELECT title, created_by FROM tickets WHERE id = ?");
         $stmtCheck->execute([$data['ticketId']]);
         $ticket = $stmtCheck->fetch();
 
@@ -220,11 +228,9 @@ class TicketController {
 
         if (!$isProcessor && !$isCreator) {
             http_response_code(403);
-            echo json_encode(['error' => 'Keine Berechtigung']);
             return;
         }
 
-        // Erlaubte Felder erweitert um title und description
         $allowedFields = ['title', 'description', 'category', 'sub_category', 'priority', 'location_type', 'building', 'room', 'status'];
         if (!in_array($data['field'], $allowedFields)) {
             http_response_code(400);
@@ -237,6 +243,15 @@ class TicketController {
             WHERE id = ?
         ");
         $stmt->execute([$data['value'], $user['id'], $data['ticketId']]);
+
+        // NEU: Wenn der Status geändert wurde, Benachrichtigung senden
+        if ($data['field'] === 'status') {
+            $this->notifySubscribers(
+                (int)$data['ticketId'], 
+                $ticket['title'], 
+                "Der Status wurde auf <b>'{$data['value']}'</b> geändert (von {$user['name']})."
+            );
+        }
 
         echo json_encode(['status' => 'success', 'editor' => $user['name']]);
     }
@@ -287,6 +302,10 @@ class TicketController {
         echo json_encode(['status' => 'success', 'deleted_count' => $stmt->rowCount()]);
     }
 
+/**
+ * Private Hilfsfunktionen
+ */
+
     private function decryptResults(array $results, string $sourceKey, string $targetKey): array {
         foreach ($results as &$item) {
             if (!empty($item[$sourceKey])) {
@@ -312,5 +331,38 @@ class TicketController {
             'facility' => $_ENV['TICKET_MAIL_FACILITY'],
             default    => $_ENV['TICKET_MAIL_IT_SUPPORT']
         };
+    }
+
+
+    private function notifySubscribers(int $ticketId, string $title, string $message) {
+        // 1. Alle E-Mails von Abonnenten + Ersteller holen
+        // Wir nutzen ein UNION, um Dubletten zu vermeiden
+        $stmt = $this->db->prepare("
+            SELECT DISTINCT u.email_encrypted 
+            FROM users u
+            JOIN ticket_subscriptions s ON u.id = s.user_id
+            WHERE s.ticket_id = ?
+            UNION
+            SELECT u.email_encrypted 
+            FROM users u
+            JOIN tickets t ON u.id = t.created_by
+            WHERE t.id = ?
+        ");
+        $stmt->execute([$ticketId, $ticketId]);
+        $emails = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        foreach ($emails as $encEmail) {
+            $email = Cipher::decrypt($encEmail, $this->encKey);
+            $this->mailService->sendNotification(
+                $email,
+                "Update zu Ticket #$ticketId: $title",
+                "<div style='font-family:Arial,sans-serif;'>
+                    <h3>Status-Update zu deinem Ticket</h3>
+                    <p>$message</p>
+                    <hr>
+                    <p><small>Du erhältst diese Mail, weil du das Ticket erstellt oder abonniert hast.</small></p>
+                </div>"
+            );
+        }
     }
 }

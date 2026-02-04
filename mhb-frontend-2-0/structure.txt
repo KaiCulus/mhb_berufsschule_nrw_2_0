@@ -44,17 +44,24 @@
 │   │   ├── LoginStatus
 │   │   │   ├── LoginButton.vue
 │   │   │   └── LogoutButton.vue
+│   │   ├── roomavaiability
+│   │   │   ├── RoomAvaiabilityMain.vue
+│   │   │   └── roomavaiabilitysubcomponents
+│   │   │       └── RoomAvaiabilityShowCalender.vue
 │   │   ├── testcomponents
 │   │   └── tickets
 │   │       ├── TicketFormComponents
+│   │       │   ├── TicketDescriptionInput.vue
 │   │       │   ├── TicketLocationInput.vue
 │   │       │   ├── TicketPriorityInfo.vue
+│   │       │   ├── TicketTitleInput.vue
 │   │       │   └── TicketTypeSelect.vue
 │   │       ├── TicketFormMain.vue
 │   │       ├── TicketVisualizationComponents
 │   │       │   ├── TicketDetailsMain.vue
 │   │       │   └── TicketVisualizationSubComponents
 │   │       │       ├── TicketNotes.vue
+│   │       │       ├── TicketStatusSelect.vue
 │   │       │       └── TicketSubscription.vue
 │   │       └── TicketVisualization.vue
 │   ├── main.js
@@ -87,4 +94,4 @@
 ├── structure.txt
 └── vite.config.js
 
-40 directories, 48 files
+42 directories, 53 files

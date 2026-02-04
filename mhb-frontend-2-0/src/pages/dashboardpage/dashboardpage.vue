@@ -13,6 +13,9 @@ import TicketVisualization from '@/components/tickets/TicketVisualization.vue';
       <FavoriteDocumentsDashboard 
         scope="verwaltung"
       />
+      </section>
+      <section class="dashboard-section">
+      <h2>🎫 Meine Tickets</h2>
       <TicketVisualization
         mode="personal"
       />
@@ -36,5 +39,11 @@ import TicketVisualization from '@/components/tickets/TicketVisualization.vue';
 }
 
 h1 { color: #000000; margin-bottom: 5px; }
-h2 { font-size: 1.2rem; color: #34495e; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+h2 { 
+  font-size: 1.2rem; 
+  color: #34495e; 
+  border-bottom: 2px solid #eee; 
+  padding-bottom: 10px; 
+  margin-bottom: 10px;
+  }
 </style>
