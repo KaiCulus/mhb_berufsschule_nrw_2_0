@@ -34,7 +34,9 @@ function handleRequest(): void
         // 1. Statische Routen prüfen
         if (isset($routes['static'][$path][$method])) {
             [$controllerClass, $action] = $routes['static'][$path][$method];
-            if ($debug) error_log("DEBUG: Static Route matched: $controllerClass -> $action");
+            if ($debug){
+                error_log("DEBUG: Static Route matched: $controllerClass -> $action");
+            } 
             
             $controller = new $controllerClass();
             $controller->$action();

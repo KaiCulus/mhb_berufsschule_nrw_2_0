@@ -16,8 +16,8 @@ class GraphClient {
         if (!file_exists($configPath)) {
             throw new \Exception("Konfigurationsdatei nicht gefunden: $configPath");
         }
-
-        $this->config = require $configPath; // IMMER require nutzen für Config-Arrays!
+        // Eventuell require nutzen für Config-Arrays!
+        $this->config = require_once $configPath; 
         
         $baseUrl = rtrim($this->config['base_url'], '/') . '/';
         $this->httpClient = new Client([

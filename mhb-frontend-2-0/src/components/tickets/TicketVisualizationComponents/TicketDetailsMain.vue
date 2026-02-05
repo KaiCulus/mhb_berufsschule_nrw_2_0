@@ -9,6 +9,7 @@ import TicketPriorityInfo from '@/components/tickets/TicketFormComponents/Ticket
 import TicketTitleInput from '@/components/tickets/TicketFormComponents/TicketTitleInput.vue';
 import TicketTypeSelect from '@/components/tickets/TicketFormComponents/TicketTypeSelect.vue';
 import TicketStatusSelect from '@/components/tickets/TicketVisualizationComponents/TicketVisualizationSubComponents/TicketStatusSelect.vue';
+import RoomSubscriptionToggle from '@/components/tickets/TicketVisualizationComponents/TicketVisualizationSubComponents/RoomSubscriptionToggle.vue';
 
 const props = defineProps({
   ticketId: { type: Number, required: true }
@@ -124,6 +125,10 @@ onMounted(fetchDetails);
             @update:building="updateField('building', $event)"
             @update:room="updateField('room', $event)"
             />
+            <div v-if="ticket.location_type === 'building' && ticket.room" class="room-follow-hint">
+              <span>Möchtest du allen Tickets für <strong>{{ ticket.room }}</strong> folgen?</span>
+              <RoomSubscriptionToggle :room-name="ticket.room" />
+            </div>
 
             <TicketPriorityInfo 
             v-model="ticket.priority" 
@@ -226,5 +231,14 @@ onMounted(fetchDetails);
 
 @media (max-width: 800px) {
   .details-grid { grid-template-columns: 1fr; }
+}
+.room-follow-hint {
+  margin-top: -15px; /* Etwas näher an den LocationInput rücken */
+  margin-bottom: 15px;
+  font-size: 0.85rem;
+  color: #666;
+  display: flex;
+  align-items: center;
+  padding-left: 5px;
 }
 </style>

@@ -11,19 +11,18 @@ export const useDocumentStore = defineStore('documents', {
     loading: false
   }),
   getters: {
-      // Wandelt die flache Liste in eine Baumstruktur um (für die Anzeige)
-      getTree: (state) => (parentId) => {
-      if (!parentId) return [];
-      
-      // Wir trimmen beide IDs, um versteckte Leerzeichen zu vermeiden
-      const searchId = String(parentId).trim();
-      
-      return state.documents.filter(d => {
-        const itemParentId = String(d.parent_id).trim();
-        return itemParentId === searchId;
-      });
+    // Wandelt die flache Liste in eine Baumstruktur um (für die Anzeige)
+    getTree: (state) => (parentId) => {
+        // Wenn gar keine ID übergeben wurde, versuchen wir es mit 'root'
+        const searchId = parentId ? String(parentId).trim() : 'root';
+        
+        return state.documents.filter(d => {
+            // Sicherstellen, dass itemParentId existiert, sonst zu 'root' oder leer mappen
+            const itemParentId = d.parent_id ? String(d.parent_id).trim() : 'root';
+            return itemParentId === searchId;
+        });
     },
-      favoriteItems: (state) => {
+    favoriteItems: (state) => {
       return state.documents.filter(doc => state.favorites.includes(doc.ms_id));
     },
     favoriteItemsByScope: (state) => (scope) => {
@@ -75,15 +74,15 @@ export const useDocumentStore = defineStore('documents', {
               this.loading = false;
           }
       },
-        getPath(targetId, rootId) {
-        const path = [];
-        let current = this.documents.find(d => d.ms_id === targetId);
-        
-        while (current && current.ms_id !== rootId) {
-            path.unshift(current); // Vorne anfügen
-            current = this.documents.find(d => d.ms_id === current.parent_id);
-        }
-        return path;
+        getPath(targetId, rootId = 'root') { // Default auf 'root'
+            const path = [];
+            let current = this.documents.find(d => d.ms_id === targetId);
+            
+            while (current && current.ms_id !== rootId && current.parent_id !== 'root') {
+                path.unshift(current);
+                current = this.documents.find(d => d.ms_id === current.parent_id);
+            }
+            return path;
         },
         async fetchFavorites() {
             // WICHTIG: Store innerhalb der Funktion initialisieren

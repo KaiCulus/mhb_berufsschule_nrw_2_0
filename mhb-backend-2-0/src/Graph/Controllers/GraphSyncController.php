@@ -40,7 +40,6 @@ class GraphSyncController extends BaseController {
         try {
             // Zeitlimit erhöhen, da Syncs lange dauern können
             set_time_limit(300); 
-
             $client = new GraphClient();
             $service = new MSFolderSyncService($client);
             $service->syncByProfile($type);

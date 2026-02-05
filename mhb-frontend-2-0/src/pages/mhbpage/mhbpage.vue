@@ -33,10 +33,10 @@ onUnmounted(() => {
     
     <div v-else class="tree-wrapper">
       <DocumentTree 
-        :parent-id="rootFolderId" 
-        :root-id="rootFolderId"
-        :depth="0" 
-      />
+      parent-id="root" 
+      root-id="root"
+      :depth="0" 
+    />
     </div>
   </div>
 </template>

@@ -57,12 +57,7 @@ class OAuthController extends BaseController {
         try {
             // 1. Validierung
             $state = $this->getQueryParam('state');
-            //TODO: Debug entfernen:
-            error_log("DEBUG: Received State: " . ($state ?? 'NULL'));
-            error_log("DEBUG: Session State: " . ($_SESSION['oauth2state'] ?? 'NULL'));
             if (empty($state) || empty($_SESSION['oauth2state']) || ($state !== $_SESSION['oauth2state'])) {
-                //TODO: Debug entfernen:
-                error_log("CRITICAL: State mismatch!");
                 unset($_SESSION['oauth2state']);
                 throw new OAuthException('Invalid state verification failed.', 403);
             }
@@ -145,7 +140,7 @@ class OAuthController extends BaseController {
             'id' => $_SESSION['user']['id'],
             'user' => $_SESSION['user'],
             'permissions' => [
-                'is_admin' => \Kai\MhbBackend20\Auth\Middleware\AuthMiddleware::hasGroup('MHB_BE_MSAL_ADMIN_VERWALTUNG'),
+                'verwaltung' => \Kai\MhbBackend20\Auth\Middleware\AuthMiddleware::hasGroup('MHB_BE_MSAL_ADMIN_VERWALTUNG'),
                 'is_processor' => \Kai\MhbBackend20\Auth\Middleware\AuthMiddleware::hasGroup('MHB_BE_MSAL_TICKETPROCESSORS'),
             ]
         ]);

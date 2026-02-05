@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue';
 import axios from '@/scripts/axios';
 import { useAuthStore } from '@/stores/authentification/auth';
 import TicketDetailsMain from '@/components/tickets/TicketVisualizationComponents/TicketDetailsMain.vue';
+import TicketSubscribeRoom from '@/components/tickets/TicketVisualizationComponents/TicketVisualizationSubComponents/TicketSubscribeRoom.vue';
 const props = defineProps({
   mode: { 
     type: String, 
@@ -73,6 +74,7 @@ onMounted(fetchTickets);
 
 <template>
   <div class="visualization-wrapper">
+    <TicketSubscribeRoom v-if="mode === 'personal'" />
     <div class="controls">
       <input 
         v-model="searchQuery" 

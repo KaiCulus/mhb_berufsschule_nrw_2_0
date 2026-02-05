@@ -58,6 +58,8 @@ return [
         // Tickets & Dashboard
         '#^api/tickets/user/(\d+)$#'     => ['GET' => [TicketController::class, 'getByUser', 1]],
         '#^api/tickets/detail/(\d+)$#'   => ['GET' => [TicketController::class, 'getDetail', 1]],
+        '#^api/tickets/subscribe-room$#' => ['POST' => [TicketController::class, 'toggleRoomSubscription']],
+        '#^api/tickets/subscribe-room/(\d+)$#' => ['GET'  => [TicketController::class, 'getRoomSubscriptions']],
 
         // Synchronisation
         '#^api/sync/execute/([^/]+)$#'   => ['POST' => [GraphSyncController::class, 'executeSync', 1]],

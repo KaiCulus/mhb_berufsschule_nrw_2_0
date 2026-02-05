@@ -64,7 +64,7 @@
       </div>
 
       <DocumentTree 
-        v-if="Number(item.is_folder) === 1 && openStates[item.ms_id]" 
+        v-if="item.is_folder && openStates[item.ms_id]" 
         :parent-id="item.ms_id" 
         :depth="depth + 1"
         :root-id="rootId"

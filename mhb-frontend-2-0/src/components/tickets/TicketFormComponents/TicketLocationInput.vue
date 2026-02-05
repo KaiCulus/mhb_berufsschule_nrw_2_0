@@ -1,4 +1,7 @@
 <script setup>
+import { computed } from 'vue';
+import { TICKET_CONFIG } from '@/components/tickets/config/ticketConfig';
+
 const props = defineProps({
   type: String,
   building: String,
@@ -7,13 +10,23 @@ const props = defineProps({
 });
 const emit = defineEmits(['update:type', 'update:building', 'update:room']);
 
-// Liste deiner Schulgebäude
-const buildings = [
-  'Hauptgebäude (R)',
-  'Chemie/Turn (S)',
-  'Technologiezentrum (T)',
-  'Landwirtschaft (L)'
-];
+const buildings = TICKET_CONFIG.buildings;
+
+const roomsByBuilding = {
+  'Hauptgebäude (R)': ['R10', 'R11', 'R15', 'R20'],
+  'Chemie/Turn (S)': ['S01', 'S12', 'S20'],
+  'Technologiezentrum (T)': ['T100', 'T105'],
+  'Landwirtschaft (L)': ['L01']
+};
+
+// Prüft, ob der Raum valide ist
+const isInvalidRoom = computed(() => {
+  if (props.isReadonly || props.type !== 'building' || !props.room || !props.building) {
+    return false;
+  }
+  const allowed = TICKET_CONFIG.roomsByBuilding[props.building] || [];
+  return !allowed.includes(props.room.toUpperCase().trim());
+});
 
 const updateType = (newType) => {
   if (props.isReadonly) return;
@@ -22,6 +35,12 @@ const updateType = (newType) => {
     emit('update:building', '');
     emit('update:room', '');
   }
+};
+
+const handleRoomInput = (e) => {
+  const val = e.target.value;
+  // Wir emittieren den bereinigten Wert für das Gebäude-Mapping
+  emit('update:room', props.type === 'building' ? val.toUpperCase().trim() : val);
 };
 </script>
 
@@ -56,13 +75,27 @@ const updateType = (newType) => {
           </select>
         </div>
         <div class="field-group">
-          <input type="text" :value="room" @input="emit('update:room', $event.target.value)" placeholder="Raumnummer" required />
+          <input 
+            type="text" 
+            :value="room" 
+            @input="handleRoomInput" 
+            placeholder="Raumnummer" 
+            :class="{ 'input-error': isInvalidRoom }"
+            required 
+          />
+          <small v-if="isInvalidRoom" class="error-text">Raum im gewählten Gebäude nicht bekannt.</small>
         </div>
       </div>
 
       <div v-else class="location-fields animate-slide">
         <div class="field-group">
-          <input type="text" :value="room" @input="emit('update:room', $event.target.value)" placeholder="Wo genau?" required />
+          <input 
+            type="text" 
+            :value="room" 
+            @input="emit('update:room', $event.target.value)" 
+            placeholder="Wo genau?" 
+            required 
+          />
         </div>
       </div>
     </template>
@@ -137,5 +170,16 @@ input, select, .other-input {
   font-weight: 500;
   border-left: 4px solid #0e64a6;
 }
+input.input-error {
+  border-color: #e74c3c;
+  background-color: #fdf2f2;
+  outline-color: #e74c3c;
+}
 
+.error-text {
+  color: #e74c3c;
+  font-size: 0.75rem;
+  margin-top: 4px;
+  display: block;
+}
 </style>

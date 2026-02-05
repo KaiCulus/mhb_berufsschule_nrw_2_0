@@ -26,15 +26,14 @@ class DocumentController extends BaseController {
      * Holt alle aktiven Dokumente eines Scopes inklusive ihrer Aliase.
      */
     public function getByScope(string $scope) {
-        // 2. Sicherheit: Authentifizierung prüfen
         AuthMiddleware::check();
 
-        // 3. Berechtigungs-Check: Falls der Scope geschützt ist, Gruppe erzwingen
         if (isset(self::SCOPE_PERMISSIONS[$scope])) {
             $this->requireGroup(self::SCOPE_PERMISSIONS[$scope]);
         }
 
-        // 4. Datenbankabfrage
+        // Optimierte Abfrage: 
+        // Wir holen die Aliase sortiert nach Beliebtheit (Anzahl Votes)
         $stmt = $this->db->prepare("
             SELECT 
                 d.ms_id, 
@@ -43,12 +42,15 @@ class DocumentController extends BaseController {
                 d.share_url, 
                 d.is_folder,
                 (
-                    SELECT GROUP_CONCAT(DISTINCT a.alias_text SEPARATOR '||')
-                    FROM document_aliases a
-                    INNER JOIN alias_votes v ON a.id = v.alias_id
-                    WHERE a.document_ms_id = d.ms_id
-                    AND a.alias_text IS NOT NULL 
-                    AND a.alias_text != ''
+                    SELECT GROUP_CONCAT(sub.alias_text ORDER BY sub.vote_count DESC SEPARATOR '||')
+                    FROM (
+                        SELECT a.alias_text, a.document_ms_id, COUNT(v.alias_id) as vote_count
+                        FROM document_aliases a
+                        LEFT JOIN alias_votes v ON a.id = v.alias_id
+                        GROUP BY a.id
+                    ) sub
+                    WHERE sub.document_ms_id = d.ms_id
+                    AND sub.alias_text > ''
                 ) as alias_list
             FROM documents d
             WHERE d.sync_scope = :scope 
@@ -59,15 +61,18 @@ class DocumentController extends BaseController {
         $stmt->execute(['scope' => $scope]);
         $docs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // 5. Nachbearbeitung (Transformation)
         foreach ($docs as &$doc) {
+            // Explode mit Filter, um leere Einträge zu vermeiden
             $doc['aliases'] = !empty($doc['alias_list']) 
                 ? explode('||', $doc['alias_list']) 
                 : [];
+            
+            // Typen-Korrektur für das Frontend (Boolean statt 0/1)
+            $doc['is_folder'] = (bool)$doc['is_folder'];
+            
             unset($doc['alias_list']); 
         }
 
-        // 6. Einheitliche Antwort
         $this->jsonResponse($docs);
     }
 }

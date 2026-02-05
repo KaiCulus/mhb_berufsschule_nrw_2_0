@@ -62,6 +62,15 @@ class TicketController extends BaseController {
         // Benachrichtigungen mit ausführlichem Body
         $this->sendInitialNotifications((int)$ticketId, $data, $user, $targetMail);
 
+        // Wir nutzen hier eine leicht angepasste Nachricht für die "Raum-Follower"
+    if ($data['location_type'] === 'building' && !empty($data['room'])) {
+            $room = strtoupper(trim($data['room']));
+            $this->notifySubscribers(
+                $ticketId, 
+                $data['title'], 
+                "Ein neues Ticket wurde für den Raum <b>$room</b> erstellt, dem du folgst."
+            );
+        }
         $this->jsonResponse(['status' => 'success', 'ticket_id' => $ticketId], 201);
     }
 
@@ -156,22 +165,37 @@ class TicketController extends BaseController {
     public function toggleSubscription() {
         $user = AuthMiddleware::check();
         $data = $this->validateRequest(['ticketId' => 'int']);
-        $ticketId = (int)$data['ticketId'];
 
-        $stmtCheck = $this->db->prepare("SELECT 1 FROM ticket_subscriptions WHERE user_id = ? AND ticket_id = ?");
-        $stmtCheck->execute([$user['id'], $ticketId]);
+        // Nutzung der generischen Methode
+        $status = $this->toggleGenericSubscription(
+            'ticket_subscriptions', 
+            ['user_id' => $user['id'], 'ticket_id' => (int)$data['ticketId']]
+        );
 
-        if ($stmtCheck->fetch()) {
-            $stmt = $this->db->prepare("DELETE FROM ticket_subscriptions WHERE user_id = ? AND ticket_id = ?");
-            $stmt->execute([$user['id'], $ticketId]);
-            $status = 'unsubscribed';
-        } else {
-            $stmt = $this->db->prepare("INSERT INTO ticket_subscriptions (user_id, ticket_id) VALUES (?, ?)");
-            $stmt->execute([$user['id'], $ticketId]);
-            $status = 'subscribed';
-        }
         $this->jsonResponse(['status' => 'success', 'subscription' => $status]);
     }
+
+    public function toggleRoomSubscription() {
+        $user = AuthMiddleware::check();
+        $data = $this->validateRequest(['room' => 'string']);
+        $room = strtoupper(trim($data['room']));
+
+        $status = $this->toggleGenericSubscription(
+            'ticket_room_subscriptions', 
+            ['user_id' => $user['id'], 'room_name' => $room]
+        );
+
+        $this->jsonResponse(['status' => 'success', 'subscription' => $status, 'room' => $room]);
+    }
+    public function getRoomSubscriptions(int $userId) {
+        AuthMiddleware::check();
+        $stmt = $this->db->prepare("SELECT room_name FROM ticket_room_subscriptions WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $rooms = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $this->jsonResponse($rooms);
+    }
+
+    
 
     public function updateField() {
         $user = AuthMiddleware::check();
@@ -245,6 +269,29 @@ class TicketController extends BaseController {
         $stmt->execute([$status, $id]);
     }
 
+    /**
+     * Kern-Logik für alle Toggle-Aktionen (Tickets, Räume, Favoriten etc.)
+     */
+    private function toggleGenericSubscription(string $table, array $conditions): string {
+        $whereClause = implode(' AND ', array_map(fn($k) => "$k = ?", array_keys($conditions)));
+        $values = array_values($conditions);
+
+        $stmtCheck = $this->db->prepare("SELECT 1 FROM $table WHERE $whereClause");
+        $stmtCheck->execute($values);
+
+        if ($stmtCheck->fetch()) {
+            $stmt = $this->db->prepare("DELETE FROM $table WHERE $whereClause");
+            $stmt->execute($values);
+            return 'unsubscribed';
+        } else {
+            $cols = implode(', ', array_keys($conditions));
+            $nodes = implode(', ', array_fill(0, count($conditions), '?'));
+            $stmt = $this->db->prepare("INSERT INTO $table ($cols) VALUES ($nodes)");
+            $stmt->execute($values);
+            return 'subscribed';
+        }
+    }
+
     private function sendInitialNotifications(int $ticketId, array $data, array $user, string $targetMail) {
         // Bestätigung an User
         $this->mailService->sendNotification(
@@ -294,13 +341,27 @@ class TicketController extends BaseController {
 
     private function notifySubscribers(int $ticketId, string $title, string $message) {
         $stmt = $this->db->prepare("
-            SELECT DISTINCT u.email_encrypted FROM users u
+            -- 1. Leute, die das Ticket direkt abonniert haben
+            SELECT u.email_encrypted FROM users u
             JOIN ticket_subscriptions s ON u.id = s.user_id WHERE s.ticket_id = ?
+            
             UNION
+            
+            -- 2. Der Ersteller des Tickets
             SELECT u.email_encrypted FROM users u
             JOIN tickets t ON u.id = t.created_by WHERE t.id = ?
+
+            UNION
+
+            -- 3. Leute, die den Raum abonniert haben, in dem das Ticket liegt
+            SELECT u.email_encrypted FROM users u
+            JOIN ticket_room_subscriptions rs ON u.id = rs.user_id
+            JOIN tickets t ON rs.room_name = t.room
+            WHERE t.id = ? AND t.location_type = 'building'
         ");
-        $stmt->execute([$ticketId, $ticketId]);
+        
+        // Wir übergeben die ticketId dreimal für die drei Teile des UNIONs
+        $stmt->execute([$ticketId, $ticketId, $ticketId]);
         $emails = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         foreach ($emails as $encEmail) {
