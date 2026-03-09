@@ -7,6 +7,7 @@ use Kai\MhbBackend20\Database\Controllers\AliasController;
 use Kai\MhbBackend20\Graph\Controllers\GraphSyncController;
 use Kai\MhbBackend20\Graph\Controllers\RaumbuchungsUebersichtController;
 use Kai\MhbBackend20\Auth\Middleware\AuthMiddleware; // Für Profil-Quick-Check
+use Kai\MhbBackend20\Database\Controllers\MaterialController;
 
 return [
     'static' => [
@@ -46,6 +47,9 @@ return [
         'api/tickets/subscribe'    => ['POST' => [TicketController::class, 'toggleSubscription']],
         'api/tickets/resolve'      => ['POST' => [TicketController::class, 'resolveTicket']],
         'api/tickets/cleanup'      => ['POST' => [TicketController::class, 'cleanupOldTickets']],
+
+        // Materialien
+        'api/materials' => ['POST' => [MaterialController::class, 'create']],
     ],
 
     'dynamic' => [
@@ -60,8 +64,14 @@ return [
         '#^api/tickets/detail/(\d+)$#'   => ['GET' => [TicketController::class, 'getDetail', 1]],
         '#^api/tickets/subscribe-room$#' => ['POST' => [TicketController::class, 'toggleRoomSubscription']],
         '#^api/tickets/subscribe-room/(\d+)$#' => ['GET'  => [TicketController::class, 'getRoomSubscriptions']],
+        '#^api/tickets/canDeleteTicket/(\d+)$#' => ['GET'  => [TicketController::class, 'getCanDeleteTicket', 1]],
 
         // Synchronisation
         '#^api/sync/execute/([^/]+)$#'   => ['POST' => [GraphSyncController::class, 'executeSync', 1]],
+
+        // Materialien
+        '#^api/materials/search$#' => ['GET' => [MaterialController::class, 'search']],
+        '#^api/materials/update/(\d+)$#' => ['POST' => [MaterialController::class, 'update', 1]],
+        '#^api/materials/delete/(\d+)$#' => ['POST' => [MaterialController::class, 'delete', 1]],
     ]
 ];

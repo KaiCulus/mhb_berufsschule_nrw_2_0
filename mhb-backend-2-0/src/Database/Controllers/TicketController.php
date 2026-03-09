@@ -248,6 +248,25 @@ class TicketController extends BaseController {
             $this->errorResponse('Nicht autorisiert', 403);
         }
     }
+    public function getCanDeleteTicket($ticketId) {
+        $user = AuthMiddleware::check(); // Aktuellen User holen
+        
+        $stmt = $this->db->prepare("SELECT created_by FROM tickets WHERE id = ?");
+        $stmt->execute([(int)$ticketId]);
+        $ticket = $stmt->fetch();
+
+        if (!$ticket) {
+            $this->errorResponse('Ticket nicht gefunden', 404);
+        }
+
+        // Prüfung: Ist die User-ID identisch mit dem Ersteller?
+        $isOwner = (int)$ticket['created_by'] === (int)$user['id'];
+
+        $this->jsonResponse([
+            'can_delete' => $isOwner
+        ]);
+    }
+
 
     public function cleanupOldTickets() {
         $this->requireGroup(self::ROLE_PROCESSOR);

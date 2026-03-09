@@ -11,8 +11,8 @@ class DocumentController extends BaseController {
     
     // 1. Rollen-Mapping für die Scopes
     private const SCOPE_PERMISSIONS = [
-        'verwaltung' => 'MHB_BE_MSAL_ADMIN_VERWALTUNG',
-        'studium'    => 'MHB_BE_MSAL_ADMIN_STUDIUM'
+        'admin_verwaltung' => 'MHB_BE_MSAL_ADMIN_VERWALTUNG',
+        'verwaltung'    => 'MHB_BE_MSAL_TEACHER_ACCESS_GROUP'
     ];
 
     private $db;
