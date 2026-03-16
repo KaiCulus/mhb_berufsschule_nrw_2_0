@@ -84,12 +84,15 @@ class OAuthController extends BaseController {
             exit;
 
         } catch (\Exception $e) {
-            error_log('OAuth Error: ' . $e->getMessage());
-            $errorParams = http_build_query(['error' => 'Login fehlgeschlagen', 'details' => $e->getMessage()]);
+            $errorId = uniqid('auth_err_');
+            error_log("[$errorId] OAuth Error: " . $e->getMessage());
+            $errorParams = http_build_query([
+                'error'   => 'Login fehlgeschlagen',
+                'ref'     => $errorId  // safe opaque reference only
+            ]);
             header('Location: ' . $_ENV['MHB_FRONTEND_URL'] . '/?login_failed=true&' . $errorParams);
             exit;
         }
-
         
     }
 

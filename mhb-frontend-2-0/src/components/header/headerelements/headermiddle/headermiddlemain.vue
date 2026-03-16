@@ -33,6 +33,7 @@
     {name: 'Verwaltungsdokumente', route: '/mhb'},
     {name: 'Raumbuchungsübersicht', route: '/rooms'},
     {name: 'Tickets/Schadensmeldung', route: '/tickets'},
+    {name: 'Materialsuche', route: '/material'}
   ]
 </script>
 

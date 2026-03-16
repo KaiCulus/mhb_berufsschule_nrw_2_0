@@ -40,6 +40,12 @@ const router = createRouter({
       meta: {requiresAuth: true}
     },
     {
+      path: '/material',
+      name: 'material',
+      component: () => import('@/pages/materialsearchpage/materialsearchpage.vue'),
+      meta: {requiresAuth: true}
+    },
+    {
       path: '/oauth/callback',
       beforeEnter: async (to, from, next) => {
         const auth = useAuthStore();

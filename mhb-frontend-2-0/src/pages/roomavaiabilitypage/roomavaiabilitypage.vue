@@ -18,5 +18,5 @@ import RoomAvaiabilityMain from '@/components/roomavaiability/RoomAvaiabilityMai
 <style scoped>
 .page-container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
 .page-header { margin-bottom: 40px; }
-.page-header h1 { color: #0e64a6; font-size: 2rem; }
+.page-header h1 { color: #000; font-size: 2rem; }
 </style>

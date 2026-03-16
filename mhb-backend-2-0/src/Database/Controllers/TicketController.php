@@ -88,21 +88,28 @@ class TicketController extends BaseController {
         $this->jsonResponse($this->decryptResults($stmt->fetchAll(PDO::FETCH_ASSOC), 'creator_name_enc', 'creator_name'));
     }
 
-    public function getByUser(int $userId) {
-        AuthMiddleware::check();
-        
-        $stmt = $this->db->prepare("
-            SELECT DISTINCT t.*, u.display_name_encrypted as creator_name_enc
-            FROM tickets t
-            JOIN users u ON t.created_by = u.id
-            LEFT JOIN ticket_subscriptions s ON t.id = s.ticket_id
-            WHERE t.created_by = ? OR s.user_id = ?
-            ORDER BY t.updated_at DESC
-        ");
-        $stmt->execute([$userId, $userId]);
-        
-        $this->jsonResponse($this->decryptResults($stmt->fetchAll(PDO::FETCH_ASSOC), 'creator_name_enc', 'creator_name'));
-    }
+public function getByUser(int $userId) {
+    AuthMiddleware::check();
+    
+    $stmt = $this->db->prepare("
+        SELECT DISTINCT t.*, u.display_name_encrypted as creator_name_enc
+        FROM tickets t
+        JOIN users u ON t.created_by = u.id
+        LEFT JOIN ticket_subscriptions s ON t.id = s.ticket_id AND s.user_id = ?
+        LEFT JOIN ticket_room_subscriptions rs ON t.room = rs.room_name AND rs.user_id = ?
+        WHERE t.created_by = ? 
+           OR s.user_id IS NOT NULL
+           OR (rs.user_id IS NOT NULL AND t.location_type = 'building')
+        ORDER BY t.updated_at DESC
+    ");
+    $stmt->execute([$userId, $userId, $userId]);
+    
+    $this->jsonResponse($this->decryptResults(
+        $stmt->fetchAll(PDO::FETCH_ASSOC), 
+        'creator_name_enc', 
+        'creator_name'
+    ));
+}
 
     public function getDetail(int $ticketId) {
         $user = AuthMiddleware::check();

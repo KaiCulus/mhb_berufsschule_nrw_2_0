@@ -95,23 +95,84 @@ class OAuthService {
     private function getMicrosoftPublicKey(string $idToken): string
     {
         $tenantId = $_ENV['MHB_BE_MSAL_TENANT_ID'];
-        $keysUrl = "https://login.microsoftonline.com/$tenantId/discovery/v2.0/keys";
+        $keysUrl  = "https://login.microsoftonline.com/{$tenantId}/discovery/v2.0/keys";
+        $cacheKey = 'ms_jwks_' . md5($tenantId);
 
+        // ── 1. Parse kid from token header ──────────────────────────────────────
         $tokenParts = explode('.', $idToken);
-        $tokenHeader = json_decode(base64_decode($tokenParts[0]), true);
-        $kid = $tokenHeader['kid'] ?? null;
+        if (count($tokenParts) < 2) {
+            throw new \RuntimeException('Malformed JWT: not enough segments.');
+        }
 
-        if (!$kid) throw new \RuntimeException('No kid found in header');
+        $headerJson  = base64_decode(strtr($tokenParts[0], '-_', '+/') . str_repeat('=', (4 - strlen($tokenParts[0]) % 4) % 4));
+        $tokenHeader = json_decode($headerJson, true);
+        $kid         = $tokenHeader['kid'] ?? null;
 
-        $response = file_get_contents($keysUrl); // Einfacherer Abruf als cURL für GET
-        $keys = json_decode($response, true);
+        if (!$kid) {
+            throw new \RuntimeException('No kid found in JWT header.');
+        }
 
-        foreach ($keys['keys'] as $keyData) {
-            if ($keyData['kid'] === $kid) {
-                return "-----BEGIN CERTIFICATE-----\n" . chunk_split($keyData['x5c'][0], 64) . "-----END CERTIFICATE-----";
+        // ── 2. Try APCu cache first ──────────────────────────────────────────────
+        $keys = null;
+        if (function_exists('apcu_fetch')) {
+            $cached = apcu_fetch($cacheKey, $success);
+            if ($success) {
+                $keys = $cached;
             }
         }
 
-        throw new \RuntimeException("No matching public key found");
+        // ── 3. Fetch from Microsoft if not cached ────────────────────────────────
+        if ($keys === null) {
+            $ch = curl_init($keysUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 5,      // fail fast if Microsoft is slow
+                CURLOPT_CONNECTTIMEOUT => 3,
+                CURLOPT_FAILONERROR    => false,   // we check HTTP code ourselves
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($curlError) {
+                throw new \RuntimeException('JWKS fetch failed (cURL): ' . $curlError);
+            }
+            if ($httpCode !== 200) {
+                throw new \RuntimeException("JWKS fetch failed: HTTP {$httpCode}");
+            }
+
+            $keys = json_decode($response, true);
+
+            if (!isset($keys['keys']) || !is_array($keys['keys'])) {
+                throw new \RuntimeException('JWKS response malformed or empty.');
+            }
+
+            // Cache for 1 hour — Microsoft rotates keys very infrequently
+            if (function_exists('apcu_store')) {
+                apcu_store($cacheKey, $keys, 3600);
+            }
+        }
+
+        // ── 4. Find the matching key by kid ─────────────────────────────────────
+        foreach ($keys['keys'] as $keyData) {
+            if (($keyData['kid'] ?? '') === $kid) {
+                if (empty($keyData['x5c'][0])) {
+                    throw new \RuntimeException("Matched key (kid={$kid}) has no x5c certificate.");
+                }
+                return "-----BEGIN CERTIFICATE-----\n"
+                    . chunk_split($keyData['x5c'][0], 64)
+                    . "-----END CERTIFICATE-----";
+            }
+        }
+
+        // ── 5. kid not found — cache may be stale, retry once ───────────────────
+        if (function_exists('apcu_delete')) {
+            apcu_delete($cacheKey);
+        }
+        throw new \RuntimeException(
+            "No matching public key found for kid={$kid}. Cache cleared — next request will re-fetch."
+        );
     }
 }

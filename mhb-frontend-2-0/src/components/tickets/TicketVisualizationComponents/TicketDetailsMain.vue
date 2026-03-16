@@ -12,21 +12,42 @@ import TicketStatusSelect from '@/components/tickets/TicketVisualizationComponen
 import RoomSubscriptionToggle from '@/components/tickets/TicketVisualizationComponents/TicketVisualizationSubComponents/RoomSubscriptionToggle.vue';
 
 const props = defineProps({
-  ticketId: { type: Number, required: true }
+  ticketId: { type: Number, required: true },
 });
 
 const emit = defineEmits(['close', 'refresh']);
 const ticket = ref(null);
 const loading = ref(true);
+const canDelete = ref(false);
+
+const onMountedHandler = async () => {
+  loading.value = true;
+  // Erst die Details laden, damit das Ticket-Objekt sicher existiert
+  await fetchDetails();
+  // Dann die Berechtigung prüfen
+  await checkDeletePermission();
+  loading.value = false;
+};
 
 const fetchDetails = async () => {
   try {
+    // Mit führendem Slash für absolute Pfade
     const response = await axios.get(`/api/tickets/detail/${props.ticketId}`);
     ticket.value = response.data;
   } catch (error) {
     console.error("Details konnten nicht geladen werden", error);
-  } finally {
-    loading.value = false;
+  }
+};
+
+const checkDeletePermission = async () => {
+  try {
+    // Hier hat der Slash gefehlt!
+    const response = await axios.get(`/api/tickets/canDeleteTicket/${props.ticketId}`);
+    canDelete.value = response.data.can_delete;
+    console.log("Kann löschen:", canDelete.value); // Debugging
+  } catch (error) {
+    console.error("Berechtigungsprüfung fehlgeschlagen", error);
+    canDelete.value = false;
   }
 };
 
@@ -62,7 +83,7 @@ const cleanupTickets = async () => {
   }
 };
 
-onMounted(fetchDetails);
+onMounted(onMountedHandler);
 </script>
 
 <template>
@@ -151,24 +172,24 @@ onMounted(fetchDetails);
     </div>
 
       <footer class="modal-footer">
-        <button v-if="ticket.can_edit_status" @click="cleanupTickets" class="cleanup-btn">
+        <button v-if="ticket.can_edit_status && !canDelete" @click="cleanupTickets" class="cleanup-btn">
           🧹 Alttickets bereinigen
         </button>
 
         <div class="main-footer-actions">
           <button 
-            v-if="ticket.can_edit_status" 
-            @click="resolveTicket" 
-            class="resolve-btn"
-          >
-            ✅ Als erledigt markieren
-          </button>
-          <button 
-            v-else 
+            v-if="canDelete" 
             @click="resolveTicket" 
             class="delete-btn"
           >
             🗑️ Ticket zurückziehen
+          </button>
+          <button 
+            v-else-if="ticket.can_edit_status" 
+            @click="resolveTicket" 
+            class="resolve-btn"
+          >
+            ✅ Als erledigt markieren
           </button>
         </div>
       </footer>

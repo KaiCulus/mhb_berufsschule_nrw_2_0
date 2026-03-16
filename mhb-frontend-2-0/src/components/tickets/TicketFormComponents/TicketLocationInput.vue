@@ -14,7 +14,7 @@ const buildings = TICKET_CONFIG.buildings;
 
 const roomsByBuilding = {
   'Hauptgebäude (R)': ['R10', 'R11', 'R15', 'R20'],
-  'Chemie/Turn (S)': ['S01', 'S12', 'S20'],
+  'Moritz-Fiege Straße (S)': ['S01', 'S12', 'S20'],
   'Technologiezentrum (T)': ['T100', 'T105'],
   'Landwirtschaft (L)': ['L01']
 };

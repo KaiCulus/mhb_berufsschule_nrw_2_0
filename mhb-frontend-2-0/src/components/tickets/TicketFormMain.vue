@@ -46,7 +46,7 @@ const submitTicket = async () => {
     // Formular zurücksetzen
     setTimeout(() => {
       emit('created'); 
-    }, 1500);
+    }, 500);
     Object.assign(ticketData, { 
       title: '', 
       description: '', 

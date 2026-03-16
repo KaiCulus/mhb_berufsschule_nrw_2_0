@@ -22,11 +22,14 @@ onUnmounted(() => {
 
 <template>
   <div class="mhb-container">
+    <div class="centeredTxt">
     <h1>MHB (Verwaltungsdokumente)</h1> 
-    <SyncFolderButton 
-      syncType="verwaltung"
-      label="Verwaltungsdokumente synchronisieren"
-    />
+    
+      <SyncFolderButton 
+        syncType="verwaltung"
+        label="Verwaltungsdokumente synchronisieren"
+      />
+    </div>
     <DocumentSearch />
 
     <div v-if="store.loading" class="loader">Lade Dokumente...</div>
@@ -42,14 +45,22 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+
+.centeredTxt{
+  text-align: center;
+}
 .mhb-container {
   padding: 20px;
-  max-width: 1000px;
+  /* Erhöht von 1000px auf 1400px oder 95% für echtes Breitbild */
+  max-width: 1400px; 
+  width: 95%;
   margin: 0 auto;
 }
+
 .tree-wrapper {
-  background: white;
-  border-radius: 8px;
-  padding: 15px;
+  /* Hintergrund auf transparent oder die Farbe der Page setzen, 
+     damit die Spalten nicht in einem weißen Kasten eingesperrt wirken */
+  background: transparent; 
+  padding: 15px 0;
 }
 </style>
