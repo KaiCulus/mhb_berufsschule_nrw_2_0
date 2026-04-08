@@ -9,74 +9,150 @@ use Kai\MhbBackend20\Auth\Middleware\AuthMiddleware;
 use Kai\MhbBackend20\Database\DB;
 use PDO;
 
-class GraphSyncController extends BaseController {
-    
+/**
+ * GraphSyncController
+ *
+ * Steuert die manuelle Synchronisation von SharePoint-Ordnern mit der Datenbank.
+ *
+ * Jeder Sync-Typ ist einer Berechtigungsgruppe zugeordnet — nur Mitglieder der
+ * jeweiligen Gruppe dürfen den entsprechenden Sync auslösen.
+ *
+ * Jeder Sync-Lauf wird in der sync_logs Tabelle protokolliert (Start, Ende, Status, Fehler).
+ */
+class GraphSyncController extends BaseController
+{
+    /**
+     * Zuordnung von Sync-Typ zu .env-Schlüssel der Berechtigungsgruppe.
+     * Gleichzeitig Whitelist der erlaubten Sync-Typen.
+     */
     private const ROLE_MAPPING = [
         'verwaltung' => 'MHB_BE_MSAL_ADMIN_VERWALTUNG',
         'paedagogik' => 'MHB_BE_MSAL_ADMIN_PAEDAGOGIK',
         'it_admin'   => 'MHB_BE_MSAL_ADMIN_IT',
     ];
 
-    private $db;
+    private \PDO $db;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->db = DB::getInstance()->getConnection();
     }
 
+    // =========================================================================
+    // Public Endpoints
+    // =========================================================================
+
     /**
      * POST api/sync/execute/{type}
+     *
+     * Löst eine Synchronisation für den angegebenen Typ aus.
+     * Nur Mitglieder der zugehörigen Gruppe dürfen den Sync triggern.
+     *
+     * Ablauf:
+     *   1. Authentifizierung und Autorisierung prüfen
+     *   2. Typ gegen Whitelist validieren
+     *   3. Sync-Log anlegen (Status: running)
+     *   4. Sync durchführen
+     *   5. Log abschließen (Status: success oder error)
+     *
+     * @param string $type Sync-Typ (muss in ROLE_MAPPING stehen)
      */
-    public function executeSync(string $type) {
+    public function executeSync(string $type): void
+    {
+        // 1. Authentifizierung zuerst — dann Typ-Validierung
+        $user = AuthMiddleware::check();
+
+        // 2. Typ gegen Whitelist prüfen
         if (!isset(self::ROLE_MAPPING[$type])) {
-            $this->errorResponse("Ungültiger Synchronisations-Typ: $type", 400);
+            $this->errorResponse("Ungültiger Synchronisations-Typ.", 400);
         }
 
-        $user = AuthMiddleware::check();
+        // 3. Gruppen-Autorisierung für diesen Sync-Typ
         $this->requireGroup(self::ROLE_MAPPING[$type]);
 
-        // 1. Log-Eintrag erstellen (Status: running)
+        // 4. Sync-Log anlegen
         $logId = $this->startSyncLog($type, $user['id']);
 
         try {
-            // Zeitlimit erhöhen, da Syncs lange dauern können
-            set_time_limit(300); 
-            $client = new GraphClient();
-            $service = new MSFolderSyncService($client);
+            // Zeitlimit erhöhen — Syncs können bei vielen Dateien länger dauern
+            set_time_limit(300);
+
+            $service = new MSFolderSyncService(new GraphClient());
             $service->syncByProfile($type);
 
-            // 2. Log-Eintrag aktualisieren (Status: success)
+            // 5a. Erfolg protokollieren
             $this->endSyncLog($logId, 'success');
 
             $this->jsonResponse([
-                'success' => true, 
-                'message' => "Synchronisation für '$type' erfolgreich abgeschlossen."
+                'success' => true,
+                'message' => "Synchronisation für '{$type}' erfolgreich abgeschlossen.",
             ]);
-        } catch (\Exception $e) {
-            // 3. Log-Eintrag im Fehlerfall (Status: error)
-            $this->endSyncLog($logId, 'error', $e->getMessage());
-            $this->errorResponse('Sync fehlgeschlagen: ' . $e->getMessage(), 500);
+
+        } catch (\Throwable $e) {
+            // 5b. Fehler protokollieren — internes Detail nur im Log, nicht im Response
+            $errorId = uniqid('sync_err_');
+            error_log("[{$errorId}] Sync '{$type}' fehlgeschlagen: " . $e->getMessage());
+            $this->endSyncLog($logId, 'error', $e->getMessage()); // Volltext ins Log
+
+            $this->errorResponse("Synchronisation fehlgeschlagen. Referenz: {$errorId}", 500);
         }
     }
 
     /**
-     * Erstellt einen initialen Log-Eintrag
+     * GET api/sync/get-permissions
+     *
+     * Gibt zurück welche Sync-Typen der aktuelle User ausführen darf.
+     * Wird vom Frontend verwendet um Sync-Buttons zu zeigen oder zu verstecken.
+     *
+     * Antwort-Beispiel:
+     *   { "permissions": { "verwaltung": true, "paedagogik": false, "it_admin": false } }
      */
-    private function startSyncLog(string $type, int $userId): int {
+    public function getPermissions(): void
+    {
+        AuthMiddleware::check();
+
+        $permissions = [];
+        foreach (self::ROLE_MAPPING as $type => $envKey) {
+            $permissions[$type] = AuthMiddleware::hasGroup($envKey);
+        }
+
+        $this->jsonResponse(['permissions' => $permissions]);
+    }
+
+    // =========================================================================
+    // Private Helpers
+    // =========================================================================
+
+    /**
+     * Legt einen initialen Sync-Log-Eintrag mit Status 'running' an.
+     *
+     * @param string $type   Sync-Typ
+     * @param int    $userId User der den Sync ausgelöst hat
+     * @return int           ID des Log-Eintrags (wird für endSyncLog benötigt)
+     */
+    private function startSyncLog(string $type, int $userId): int
+    {
         $stmt = $this->db->prepare("
-            INSERT INTO sync_logs (sync_type, triggered_by, status, started_at) 
+            INSERT INTO sync_logs (sync_type, triggered_by, status, started_at)
             VALUES (?, ?, 'running', NOW())
         ");
         $stmt->execute([$type, $userId]);
-        return (int)$this->db->lastInsertId();
+
+        return (int) $this->db->lastInsertId();
     }
 
     /**
-     * Schließt den Log-Eintrag ab
+     * Schließt einen Sync-Log-Eintrag ab.
+     *
+     * @param int         $logId   ID des Log-Eintrags
+     * @param string      $status  'success' oder 'error'
+     * @param string|null $message Fehlermeldung bei Status 'error'
      */
-    private function endSyncLog(int $logId, string $status, ?string $message = null): void {
+    private function endSyncLog(int $logId, string $status, ?string $message = null): void
+    {
         $stmt = $this->db->prepare("
-            UPDATE sync_logs 
-            SET status = ?, ended_at = NOW(), error_message = ? 
+            UPDATE sync_logs
+            SET status = ?, ended_at = NOW(), error_message = ?
             WHERE id = ?
         ");
         $stmt->execute([$status, $message, $logId]);

@@ -3,48 +3,62 @@
 namespace Kai\MhbBackend20\Database\Controllers;
 
 use Kai\MhbBackend20\Common\BaseController;
-use Kai\MhbBackend20\Database\DB;
 use Kai\MhbBackend20\Auth\Middleware\AuthMiddleware;
+use Kai\MhbBackend20\Database\DB;
 use PDO;
 
-class FavoriteController extends BaseController {
-    
-    private $db;
+/**
+ * FavoriteController
+ *
+ * Verwaltet die Favoriten-Dokumente des eingeloggten Users.
+ *
+ * Favoriten werden ausschließlich anhand der Session-User-ID gespeichert —
+ * kein User kann Favoriten eines anderen Users lesen oder verändern.
+ *
+ * Alle Endpunkte erfordern eine aktive Authentifizierung.
+ */
+class FavoriteController extends BaseController
+{
+    private \PDO $db;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->db = DB::getInstance()->getConnection();
     }
 
     /**
      * GET api/favorites
-     * Holt alle Favoriten-IDs für den aktuell eingeloggten User
+     *
+     * Gibt alle Favoriten-Dokument-IDs des aktuellen Users zurück.
+     *
+     * Antwort: ["ms-id-1", "ms-id-2", ...]
      */
-    public function getFavorites() {
-        // Authentifizierung prüfen und User-Daten holen
+    public function getFavorites(): void
+    {
         $user = AuthMiddleware::check();
-        
+
         $stmt = $this->db->prepare("SELECT document_ms_id FROM user_favorites WHERE user_id = ?");
         $stmt->execute([$user['id']]);
-        
-        // FETCH_COLUMN gibt uns direkt das flache Array ["ID1", "ID2"]
-        $favorites = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        
-        $this->jsonResponse($favorites);
+
+        // FETCH_COLUMN gibt direkt ein flaches Array zurück — kein array_map nötig
+        $this->jsonResponse($stmt->fetchAll(PDO::FETCH_COLUMN));
     }
 
     /**
      * POST api/favorites
-     * Fügt einen Favoriten für den aktuellen User hinzu
+     *
+     * Fügt ein Dokument zu den Favoriten des aktuellen Users hinzu.
+     * Bereits vorhandene Favoriten werden stillschweigend ignoriert (INSERT IGNORE).
+     *
+     * Erwarteter Request-Body:
+     *   { "docId": "..." }
      */
-    public function addFavorite() {
+    public function addFavorite(): void
+    {
         $user = AuthMiddleware::check();
-        
-        // Validierung via BaseController (erwartet docId im Body)
-        $data = $this->validateRequest([
-            'docId' => 'string'
-        ]);
+        $data = $this->validateRequest(['docId' => 'string']);
 
-        // INSERT IGNORE verhindert Dubletten ohne Fehlermeldung
+        // INSERT IGNORE: verhindert Duplikate ohne Fehler zu werfen
         $stmt = $this->db->prepare("INSERT IGNORE INTO user_favorites (user_id, document_ms_id) VALUES (?, ?)");
         $stmt->execute([$user['id'], $data['docId']]);
 
@@ -53,14 +67,19 @@ class FavoriteController extends BaseController {
 
     /**
      * DELETE api/favorites
-     * Entfernt einen Favoriten für den aktuellen User
+     *
+     * Entfernt ein Dokument aus den Favoriten des aktuellen Users.
+     * Die WHERE-Bedingung auf user_id stellt sicher, dass kein User
+     * Favoriten anderer User löschen kann.
+     *
+     * Erwarteter Request-Body:
+     *   { "docId": "..." }
      */
-    public function removeFavorite() {
-        $user = AuthMiddleware::check();
-        
-        // Da DELETE oft keine Bodys hat, prüfen wir hier beides: 
-        // Entweder via validateRequest (Body) oder getQueryParam (URL)
-        $docId = $this->validateRequest(['docId' => 'string'])['docId'];
+    public function removeFavorite(): void
+    {
+        $user  = AuthMiddleware::check();
+        $data  = $this->validateRequest(['docId' => 'string']);
+        $docId = $data['docId'];
 
         $stmt = $this->db->prepare("DELETE FROM user_favorites WHERE user_id = ? AND document_ms_id = ?");
         $stmt->execute([$user['id'], $docId]);

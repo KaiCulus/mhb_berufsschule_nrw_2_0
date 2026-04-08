@@ -1,42 +1,84 @@
 <?php
+
 namespace Kai\MhbBackend20\Database;
 
 use PDO;
 use PDOException;
 
-class DB {
+/**
+ * DB
+ *
+ * Singleton-Wrapper um eine PDO-Datenbankverbindung.
+ *
+ * Stellt sicher dass während eines Request-Lebenszyklus nur eine einzige
+ * Datenbankverbindung geöffnet wird — alle Controller teilen sich dieselbe Instanz.
+ *
+ * Verwendung:
+ *   $db = DB::getInstance()->getConnection();
+ *   $stmt = $db->prepare("SELECT ...");
+ *
+ * Konfiguration via .env:
+ *   DB_HOST, DB_NAME, DB_USER, DB_PASS
+ *   (werden in index.php::loadEnvironmentConfiguration() als Pflichtfelder validiert)
+ */
+class DB
+{
     private static ?DB $instance = null;
     private PDO $connection;
 
-    // Der Konstruktor ist private, damit niemand "new DB()" aufrufen kann
-    private function __construct() {
+    /**
+     * Privater Konstruktor — verhindert direktes "new DB()".
+     * Verbindungsaufbau nur über getInstance().
+     *
+     * @throws \RuntimeException Wenn die Datenbankverbindung fehlschlägt
+     */
+    private function __construct()
+    {
         try {
-            $dsn = "mysql:host=" . $_ENV['DB_HOST'] . ";dbname=" . $_ENV['DB_NAME'] . ";charset=utf8mb4";
+            $dsn = sprintf(
+                'mysql:host=%s;dbname=%s;charset=utf8mb4',
+                $_ENV['DB_HOST'],
+                $_ENV['DB_NAME']
+            );
+
             $this->connection = new PDO($dsn, $_ENV['DB_USER'], $_ENV['DB_PASS'], [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                // Exceptions statt silent errors
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                // Ergebnisse standardmäßig als assoziative Arrays
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
+                // Native Prepared Statements erzwingen (verhindert Emulation, sicherer)
+                PDO::ATTR_EMULATE_PREPARES   => false,
             ]);
+
         } catch (PDOException $e) {
-            // Im Backend-Kontext ist eine Exception besser als ein die(), 
-            // damit der Service sie ggf. loggen kann.
-            throw new \Exception("Datenbankverbindung fehlgeschlagen: " . $e->getMessage());
+            // Verbindungsdetails (Passwort, Host) nicht nach außen geben
+            error_log('DB: Verbindung fehlgeschlagen: ' . $e->getMessage());
+            throw new \RuntimeException('Datenbankverbindung fehlgeschlagen.');
         }
     }
 
-    // Liefert die Instanz der DB-Klasse (das Singleton)
-    public static function getInstance(): DB {
+    /**
+     * Gibt die einzige DB-Instanz zurück, legt sie beim ersten Aufruf an.
+     */
+    public static function getInstance(): self
+    {
         if (self::$instance === null) {
             self::$instance = new self();
         }
+
         return self::$instance;
     }
 
-    // Liefert die eigentliche PDO-Verbindung
-    public function getConnection(): PDO {
+    /**
+     * Gibt die PDO-Verbindung zurück.
+     */
+    public function getConnection(): PDO
+    {
         return $this->connection;
     }
 
-    // Verhindert das Klonen der Instanz
+    /**
+     * Verhindert das Klonen der Singleton-Instanz.
+     */
     private function __clone() {}
 }

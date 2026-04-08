@@ -1,0 +1,93 @@
+============================================================
+  DEPLOYMENT CHECKLIST — mhb_berufsschule_nrw_2_0
+============================================================
+
+1 — FRONTEND BAUEN
+------------------------------------------------------------
+[ ] VITE_MHB_BACKEND_URL leer lassen in prod .env
+      VITE_MHB_BACKEND_URL=
+
+[ ] npm run build ausführen
+      cd mhb-frontend-2-0 && npm run build
+
+[ ] dist/ Inhalt nach /var/www/html/mhb_2_0/ kopieren
+      index.html, assets/ usw. direkt hinein
+
+
+2 — BACKEND DEPLOYEN
+------------------------------------------------------------
+[ ] mhb-backend-2-0/ nach /var/www/html/mhb_2_0/mhb_be/ kopieren
+      vendor/ nicht vergessen
+
+[ ] composer install --no-dev auf dem Server ausführen
+      cd mhb_be && composer install --no-dev --optimize-autoloader
+
+[ ] Prod .env in mhb_be/ anlegen
+      APP_ENV=production
+      MHB_FRONTEND_URL=https://xy.de/mhb_2_0
+      MHB_BE_MSAL_REDIRECT_URI=https://xy.de/mhb_2_0/mhb_be/oauth/callback
+      APP_DEBUG=false
+      APP_ENCRYPTION_KEY=...
+      DB-Zugangsdaten ...
+
+[ ] .env nicht öffentlich zugänglich (außerhalb von public/)
+      .env liegt in mhb_be/, nicht in mhb_be/public/
+
+
+3 — SERVER KONFIGURIEREN
+------------------------------------------------------------
+[ ] .htaccess für Frontend anlegen
+      /mhb_2_0/.htaccess — Vue Router Fallback auf index.html
+
+[ ] .htaccess für Backend anlegen
+      /mhb_2_0/mhb_be/.htaccess — alles auf public/index.php
+
+[ ] mod_rewrite auf Apache aktiviert
+      a2enmod rewrite && systemctl restart apache2
+
+[ ] AllowOverride All im Apache VirtualHost gesetzt
+      Sonst werden .htaccess Dateien ignoriert
+
+
+4 — AZURE & OAUTH
+------------------------------------------------------------
+[ ] Redirect URI in Azure App Registration aktualisieren
+      https://xy.de/mhb_2_0/mhb_be/oauth/callback
+
+[ ] MHB_BE_MSAL_REDIRECT_URI in prod .env anpassen
+      Muss exakt mit Azure übereinstimmen
+
+[ ] OAuth Login einmal vollständig testen
+      Login → Callback → Dashboard → Logout
+
+
+5 — ABSCHLUSS
+------------------------------------------------------------
+[ ] Datenbank-Migration ausgeführt (CBC → GCM)
+      php migrate_cipher_cbc_to_gcm.php
+      Erwartetes Ergebnis: Succeeded: X, Failed: 0
+
+[ ] APP_DEBUG=false in prod .env gesetzt
+      Keine internen Fehlermeldungen nach außen
+
+[ ] Migrations-Skript vom Server entfernen
+      migrate_cipher_cbc_to_gcm.php nicht öffentlich lassen
+
+============================================================
+  VOR DEM DEPLOYMENT — Dateien nochmal prüfen
+============================================================
+
+Backend:
+  [ ] public/index.php       — SameSite=Lax, APP_ENV-Check in setupCorsHeaders()
+  [ ] src/Auth/Controllers/OAuthController.php  — Fehlerdetails nicht im Redirect
+  [ ] src/Auth/Services/OAuthService.php        — getMicrosoftPublicKey() mit Cache
+  [ ] src/Common/Cipher.php                     — AES-256-GCM, Tag wird extrahiert
+  [ ] src/Auth/Middleware/AuthMiddleware.php     — id=0 wirft Exception
+  [ ] config/routes.php                         — keine offenen Routen ohne Auth
+
+Frontend:
+  [ ] src/scripts/axios.js           — baseURL Fallback auf /mhb_2_0/mhb_be
+  [ ] src/stores/authentification/auth.js  — kein accessToken/idToken in localStorage
+  [ ] vite.config.js                 — base: /mhb_2_0/ für production, proxy für dev
+
+============================================================

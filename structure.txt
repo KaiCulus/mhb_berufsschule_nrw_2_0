@@ -1,20 +1,20 @@
 .
+├── deployment_checklist.txt
 ├── mhb-backend-2-0
 │   ├── bin
+│   │   ├── conjobnotes.txt
 │   │   └── console-sync.php
 │   ├── composer.json
 │   ├── composer.lock
 │   ├── config
 │   │   ├── graph.php
 │   │   ├── microsoft_keys.json
-│   │   └── oauth.php
+│   │   ├── oauth.php
+│   │   └── routes.php
 │   ├── phpunit.xml
 │   ├── public
 │   │   └── index.php
 │   ├── src
-│   │   ├── Api
-│   │   │   └── Controllers
-│   │   │       └── TestController.php
 │   │   ├── Auth
 │   │   │   ├── Controllers
 │   │   │   │   └── OAuthController.php
@@ -26,21 +26,24 @@
 │   │   │   └── Services
 │   │   │       └── OAuthService.php
 │   │   ├── Common
+│   │   │   ├── BaseController.php
 │   │   │   └── Cipher.php
 │   │   ├── Database
 │   │   │   ├── Controllers
 │   │   │   │   ├── AliasController.php
 │   │   │   │   ├── DocumentController.php
 │   │   │   │   ├── FavoriteController.php
+│   │   │   │   ├── MaterialController.php
 │   │   │   │   └── TicketController.php
-│   │   │   ├── DB.php
-│   │   │   └── Repositories
+│   │   │   └── DB.php
 │   │   └── Graph
 │   │       ├── Controllers
-│   │       │   └── GraphSyncController.php
+│   │       │   ├── GraphSyncController.php
+│   │       │   └── RaumbuchungsUebersichtController.php
 │   │       ├── GraphClient.php
 │   │       └── Services
 │   │           ├── MSFolderSyncService.php
+│   │           ├── RaumbuchungsUebersichtService.php
 │   │           └── TicketMailService.php
 │   └── structure.txt
 ├── mhb-frontend-2-0
@@ -89,17 +92,32 @@
 │   │   │   ├── LoginStatus
 │   │   │   │   ├── LoginButton.vue
 │   │   │   │   └── LogoutButton.vue
+│   │   │   ├── materialcomponents
+│   │   │   │   ├── Materialeingabe.vue
+│   │   │   │   ├── Materialliste.vue
+│   │   │   │   └── Materialsearch.vue
+│   │   │   ├── roomavaiability
+│   │   │   │   ├── RoomAvaiabilityMain.vue
+│   │   │   │   └── roomavaiabilitysubcomponents
+│   │   │   │       └── RoomAvaiabilityShowCalender.vue
 │   │   │   ├── testcomponents
 │   │   │   └── tickets
+│   │   │       ├── config
+│   │   │       │   └── ticketConfig.js
 │   │   │       ├── TicketFormComponents
+│   │   │       │   ├── TicketDescriptionInput.vue
 │   │   │       │   ├── TicketLocationInput.vue
 │   │   │       │   ├── TicketPriorityInfo.vue
+│   │   │       │   ├── TicketTitleInput.vue
 │   │   │       │   └── TicketTypeSelect.vue
 │   │   │       ├── TicketFormMain.vue
 │   │   │       ├── TicketVisualizationComponents
 │   │   │       │   ├── TicketDetailsMain.vue
 │   │   │       │   └── TicketVisualizationSubComponents
+│   │   │       │       ├── RoomSubscriptionToggle.vue
 │   │   │       │       ├── TicketNotes.vue
+│   │   │       │       ├── TicketStatusSelect.vue
+│   │   │       │       ├── TicketSubscribeRoom.vue
 │   │   │       │       └── TicketSubscription.vue
 │   │   │       └── TicketVisualization.vue
 │   │   ├── main.js
@@ -112,6 +130,8 @@
 │   │   │   │   └── unspecificDocumentsPage.vue
 │   │   │   ├── loginpage
 │   │   │   │   └── loginpage.vue
+│   │   │   ├── materialsearchpage
+│   │   │   │   └── materialsearchpage.vue
 │   │   │   ├── mhbpage
 │   │   │   │   └── mhbpage.vue
 │   │   │   ├── roomavaiabilitypage
@@ -133,4 +153,4 @@
 │   └── vite.config.js
 └── structure.txt
 
-61 directories, 73 files
+63 directories, 91 files
