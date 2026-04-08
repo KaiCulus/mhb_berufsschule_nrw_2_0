@@ -3,20 +3,28 @@ import { ref } from 'vue';
 import TicketFormMain from '@/components/tickets/TicketFormMain.vue';
 import TicketVisualization from '@/components/tickets/TicketVisualization.vue';
 
+/**
+ * ticketpage — Ticket-System
+ *
+ * Zentrale Seite für das interne Meldesystem.
+ * Neue Tickets werden über ein ein- und ausklappbares Formular erstellt.
+ * Darunter werden alle vorhandenen Meldungen als Liste angezeigt.
+ */
+
 const showForm = ref(false);
 
 const toggleForm = () => {
   showForm.value = !showForm.value;
 };
-
 </script>
 
 <template>
   <div class="ticket-page-container">
     <h1>Ticket-System</h1>
+
     <div class="header-section">
-      <button 
-        @click="toggleForm" 
+      <button
+        @click="toggleForm"
         :class="['toggle-btn', { 'is-active': showForm }]"
       >
         {{ showForm ? '✖ Schließen' : '➕ Neues Problem melden' }}
@@ -63,13 +71,14 @@ const toggleForm = () => {
   transition: all 0.3s ease;
 }
 
+/* Roter Hintergrund signalisiert "Schließen"-Aktion */
 .toggle-btn.is-active {
   background-color: #e74c3c;
 }
 
 .toggle-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .form-wrapper {
@@ -87,11 +96,13 @@ const toggleForm = () => {
   margin: 40px 0;
 }
 
-/* Vue Transition Animationen */
-.fade-slide-enter-active, .fade-slide-leave-active {
+.fade-slide-enter-active,
+.fade-slide-leave-active {
   transition: all 0.4s ease;
 }
-.fade-slide-enter-from, .fade-slide-leave-to {
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
   opacity: 0;
   transform: translateY(-20px);
 }

@@ -9,7 +9,6 @@
 │   ├── config
 │   │   ├── graph.php
 │   │   ├── microsoft_keys.json
-│   │   ├── oauth.php
 │   │   └── routes.php
 │   ├── phpunit.xml
 │   ├── public
@@ -153,4 +152,4 @@
 │   └── vite.config.js
 └── structure.txt
 
-63 directories, 91 files
+63 directories, 90 files

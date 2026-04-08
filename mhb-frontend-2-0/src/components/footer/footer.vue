@@ -1,4 +1,9 @@
 <script setup>
+/**
+ * footer — App-Footer
+ *
+ * Fixierter Footer am unteren Bildschirmrand mit Copyright-Angabe.
+ */
 </script>
 
 <template>
@@ -8,9 +13,9 @@
 </template>
 
 <style scoped>
-    footer {
-        position: fixed;
-        bottom: 0;
-        padding-bottom: 20px;
-    }
+footer {
+  position: fixed;
+  bottom: 0;
+  padding-bottom: 20px;
+}
 </style>

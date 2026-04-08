@@ -3,34 +3,66 @@ import { ref, onMounted } from 'vue';
 import axios from '@/scripts/axios';
 import { useAuthStore } from '@/stores/authentification/auth';
 
+/**
+ * Materialliste — Vollständiges Inventar als sortierbare Tabelle
+ *
+ * Lädt beim Mounten alle Materialien und ermöglicht das Sortieren
+ * nach Name, Ort und Ansprechpartner durch Klick auf die Spaltenköpfe.
+ *
+ * Bearbeiten und Löschen sind nur für den Ersteller eines Eintrags sichtbar
+ * (Vergleich via authStore.dbId).
+ *
+ * Emits:
+ *   edit — Gibt das Material-Objekt an die Elternseite weiter,
+ *          die das Edit-Modal öffnet.
+ *
+ * Expose:
+ *   refresh — Kann von der Elternseite aufgerufen werden um die Liste
+ *             nach externen Änderungen (z.B. nach Neu-Erfassung) neu zu laden.
+ */
+
 const authStore = useAuthStore();
+const emit = defineEmits(['edit']);
+
 const materials = ref([]);
 const loading = ref(true);
 const sort = ref({ by: 'name', dir: 'ASC' });
 
-const emit = defineEmits(['edit']);
-
 const fetchMaterials = async () => {
   loading.value = true;
-  const res = await axios.get(`/api/materials/search?q=&sortBy=${sort.value.by}&sortDir=${sort.value.dir}`);
-  materials.value = res.data;
-  loading.value = false;
+  try {
+    const res = await axios.get(`/api/materials/search?q=&sortBy=${sort.value.by}&sortDir=${sort.value.dir}`);
+    materials.value = res.data;
+  } catch (error) {
+    console.error('Fehler beim Laden der Materialliste:', error);
+  } finally {
+    loading.value = false;
+  }
 };
 
+/**
+ * Sortierung umschalten: Beim ersten Klick auf ein neues Feld → ASC,
+ * beim erneuten Klick auf dasselbe Feld → Richtung umkehren.
+ */
 const toggleSort = (field) => {
   if (sort.value.by === field) {
     sort.value.dir = sort.value.dir === 'ASC' ? 'DESC' : 'ASC';
   } else {
-    sort.value.by = field;
+    sort.value.by  = field;
     sort.value.dir = 'ASC';
   }
   fetchMaterials();
 };
 
 const deleteItem = async (id) => {
-  if (!confirm("Wirklich löschen?")) return;
-  await axios.post(`/api/materials/delete/${id}`);
-  fetchMaterials();
+  if (!confirm('Wirklich löschen?')) return;
+  try {
+    await axios.post(`/api/materials/delete/${id}`);
+    fetchMaterials();
+  } catch (error) {
+    console.error('Fehler beim Löschen des Materials:', error);
+    alert('Löschen fehlgeschlagen.');
+  }
 };
 
 onMounted(fetchMaterials);
@@ -40,9 +72,9 @@ defineExpose({ refresh: fetchMaterials });
 <template>
   <div class="material-list-container">
     <h3>📋 Gesamtinventar ({{ materials.length }} Gegenstände)</h3>
-    
+
     <div v-if="loading" class="loading-inline">Daten werden geladen...</div>
-    
+
     <div v-else class="table-responsive">
       <table class="inventory-table">
         <thead>
@@ -75,6 +107,7 @@ defineExpose({ refresh: fetchMaterials });
 
             <td class="contact-cell">{{ item.all_contacts || '-' }}</td>
 
+            <!-- Aktionen nur für den Ersteller des Eintrags einblenden -->
             <td>
               <div v-if="item.created_by == authStore.dbId" class="action-btns">
                 <button @click="emit('edit', item)" class="edit-btn" title="Bearbeiten">✏️</button>
@@ -84,7 +117,7 @@ defineExpose({ refresh: fetchMaterials });
           </tr>
         </tbody>
       </table>
-      
+
       <div v-if="materials.length === 0" class="empty-state">
         Keine Materialien gefunden.
       </div>
@@ -98,10 +131,12 @@ defineExpose({ refresh: fetchMaterials });
   background: white;
   padding: 20px;
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-.table-responsive { overflow-x: auto; }
+.table-responsive {
+  overflow-x: auto;
+}
 
 .inventory-table {
   width: 100%;
@@ -140,16 +175,44 @@ defineExpose({ refresh: fetchMaterials });
   font-size: 0.85rem;
 }
 
-.contact-cell { color: #636e72; font-size: 0.9rem; }
+.contact-cell {
+  color: #636e72;
+  font-size: 0.9rem;
+}
 
-.empty-state { text-align: center; padding: 30px; color: #999; }
+.empty-state {
+  text-align: center;
+  padding: 30px;
+  color: #999;
+}
 
 tr:hover { background-color: #f9fffb; }
 
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
 
-.sortable { cursor: pointer; user-select: none; }
 .sortable:hover { color: #00b894; }
-.action-btns { display: flex; gap: 10px; }
-.edit-icon, .delete-icon { background: none; border: none; cursor: pointer; filter: grayscale(1); }
-.edit-icon:hover, .delete-icon:hover { filter: grayscale(0); transform: scale(1.2); }
+
+.action-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.edit-btn,
+.delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  opacity: 0.6;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.edit-btn:hover,
+.delete-btn:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
 </style>

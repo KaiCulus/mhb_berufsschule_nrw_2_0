@@ -95,7 +95,7 @@ return [
 
         // --- Aliases ---------------------------------------------------------
         // GET api/aliases/{scope}/{documentId}
-        '#^api/aliases/([^/]+)/(\d+)$#' => ['GET' => [AliasController::class, 'getAliases']],
+        '#^api/aliases/([^/]+)/([^/]+)$#' => ['GET' => [AliasController::class, 'getAliases']],
 
         // --- Favoriten -------------------------------------------------------
         // GET api/favorites/{scope}

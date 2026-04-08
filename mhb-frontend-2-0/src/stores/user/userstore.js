@@ -1,18 +1,19 @@
-import { defineStore } from 'pinia'
+// Derzeit noch nicht in Benutzung. Kann später für UI Präferenzen o.Ä. verwendet werden.
+import { defineStore } from 'pinia';
 
+/**
+ * User Preferences Store
+ *
+ * Speichert benutzerspezifische UI-Einstellungen, die über Sessions hinaus
+ * erhalten bleiben sollen (z.B. Anzeigemodus, Sprache).
+ * Authentifizierungsdaten → auth.js
+ * Dokumenten-/Favoritendaten → documents.js
+ */
 export const useUserstore = defineStore('userstore', {
   state: () => ({
-    name: "",
-    favorites: [],
+    // Hier können später UI-Präferenzen rein, z.B.:
+    // theme: 'light',
+    // language: 'de',
   }),
-  actions: {
-    getFavorites(favoritedata){
-        this.favorites = favoritedata
-    },
-    getName(namedata){
-        this.name = namedata
-    }
-  },
-  persist: true, // Login-Status persistieren (optional)
-})
-
+  persist: true,
+});

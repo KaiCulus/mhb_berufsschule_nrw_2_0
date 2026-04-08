@@ -1,17 +1,24 @@
 <script setup>
-  import { useAuthStore } from '@/stores/authentification/auth';
-  import { storeToRefs } from 'pinia';
+import { useAuthStore } from '@/stores/authentification/auth';
+import { storeToRefs } from 'pinia';
 
-  const auth = useAuthStore();
-  const { isLoading } = storeToRefs(auth);
+/**
+ * LoginButton
+ *
+ * Löst den Microsoft OAuth-Login-Flow aus.
+ * Während des Redirects ist der Button deaktiviert, um Doppelklicks zu verhindern.
+ */
 
-  const login = async () => {
-    try {
-      await auth.login();
-    } catch (error) {
-      alert('Anmeldung fehlgeschlagen. Bitte versuche es erneut.');
-    }
-  };
+const auth = useAuthStore();
+const { isLoading } = storeToRefs(auth);
+
+const login = async () => {
+  try {
+    await auth.login();
+  } catch (error) {
+    alert('Anmeldung fehlgeschlagen. Bitte versuche es erneut.');
+  }
+};
 </script>
 
 <template>
@@ -19,5 +26,3 @@
     {{ isLoading ? 'Lädt...' : 'Mit Microsoft 365 anmelden' }}
   </button>
 </template>
-
-

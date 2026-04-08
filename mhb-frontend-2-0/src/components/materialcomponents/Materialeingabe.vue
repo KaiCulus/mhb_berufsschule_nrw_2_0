@@ -3,18 +3,34 @@ import { ref, reactive, onMounted, watch, nextTick } from 'vue';
 import axios from '@/scripts/axios';
 import { useAuthStore } from '@/stores/authentification/auth';
 
+/**
+ * Materialeingabe — Formular für Neu-Erfassung und Bearbeitung
+ *
+ * Zwei Modi, gesteuert durch das `editData`-Prop:
+ *   - Neu (editData = null): Formular wird nach dem Speichern zurückgesetzt,
+ *     Fokus springt zurück ins Namensfeld für schnelle Folge-Eingaben.
+ *   - Bearbeiten (editData = Object): Formular wird mit den bestehenden
+ *     Daten befüllt; Speichern schließt das Edit-Modal via 'saved'-Event.
+ *
+ * Props:
+ *   editData — Bestehendes Material-Objekt zum Bearbeiten, oder null für Neu-Modus.
+ * Emits:
+ *   saved     — Nach erfolgreichem Speichern (beide Modi)
+ *   cancel    — Abbrechen im Bearbeiten-Modus
+ *   itemAdded — Nach Neu-Erfassung (kann genutzt werden um Listen zu refreshen)
+ */
+
 const authStore = useAuthStore();
 const emit = defineEmits(['saved', 'cancel', 'itemAdded']);
 
 const props = defineProps({
-  editData: { type: Object, default: null } // Falls vorhanden -> Update Modus
+  editData: { type: Object, default: null }
 });
 
-// Refs für UI-Effekte
 const nameInput = ref(null);
 const showSuccess = ref(false);
+const loading = ref(false);
 
-// Initialzustand
 const form = reactive({
   name: '',
   description: 'Selbsterklärend',
@@ -23,32 +39,33 @@ const form = reactive({
   contacts: ['']
 });
 
-const loading = ref(false);
-
+/** Befüllt das Formular mit den Daten eines bestehenden Eintrags. */
 const fillForm = (data) => {
   if (!data) return;
-  form.name = data.name;
+  form.name        = data.name;
   form.description = data.description;
-  form.location = data.location;
-  form.quantity = data.quantity;
-  form.contacts = data.all_contacts ? data.all_contacts.split(', ') : [''];
+  form.location    = data.location;
+  form.quantity    = data.quantity;
+  form.contacts    = data.all_contacts ? data.all_contacts.split(', ') : [''];
 };
 
 onMounted(() => {
   if (props.editData) {
     fillForm(props.editData);
   } else {
+    // Im Neu-Modus: eingeloggten User als ersten Ansprechpartner vorbelegen
     form.contacts[0] = authStore.user?.name || '';
   }
-  // Fokus direkt beim Laden auf das Namensfeld
   nameInput.value?.focus();
 });
 
+// Formular neu befüllen wenn editData sich ändert (z.B. anderes Item im Modal öffnen)
 watch(() => props.editData, (newVal) => {
   if (newVal) fillForm(newVal);
 }, { deep: true });
 
 const addContactField = () => form.contacts.push('');
+
 const removeContactField = (index) => {
   if (form.contacts.length > 1) form.contacts.splice(index, 1);
 };
@@ -58,41 +75,44 @@ const submitForm = async () => {
 
   loading.value = true;
   try {
-    const payload = { ...form, contacts: form.contacts.filter(c => c.trim() !== '') };
-    
+    const payload = {
+      ...form,
+      // Leere Kontaktfelder vor dem Senden herausfiltern
+      contacts: form.contacts.filter(c => c.trim() !== '')
+    };
+
     if (props.editData) {
       await axios.post(`/api/materials/update/${props.editData.id}`, payload);
       emit('saved');
     } else {
       await axios.post('/api/materials', payload);
-      
-      // Feedback einblenden
+
+      // Visuelles Feedback einblenden und nach 2s automatisch ausblenden
       showSuccess.value = true;
       setTimeout(() => showSuccess.value = false, 2000);
 
-      // Reset & Fokus
-      form.name = '';
+      // Formular für nächste Eingabe zurücksetzen (Ort/Kontakt bleiben erhalten)
+      form.name        = '';
       form.description = 'Selbsterklärend';
-      form.quantity = 'x>0';
-      
-      // Warten bis DOM updated, dann Fokus setzen
+      form.quantity    = 'x>0';
+
+      // nextTick abwarten damit das DOM aktualisiert ist, bevor der Fokus gesetzt wird
       await nextTick();
       nameInput.value?.focus();
-      
+
       emit('itemAdded');
     }
   } catch (error) {
-    console.error(error);
+    console.error('Fehler beim Speichern des Materials:', error);
   } finally {
     loading.value = false;
   }
 };
-
 </script>
 
 <template>
-  <div 
-    class="material-form card" 
+  <div
+    class="material-form card"
     :class="{ 'success-glow': showSuccess }"
     @keydown.enter="submitForm"
   >
@@ -102,16 +122,16 @@ const submitForm = async () => {
         <span v-if="showSuccess" class="success-msg">✅ Gespeichert!</span>
       </Transition>
     </div>
-    
+
     <div class="form-grid">
       <div class="field-group">
         <label>Was hast du? (Gegenstand)</label>
-        <input 
-          ref="nameInput" 
-          v-model="form.name" 
-          type="text" 
-          placeholder="z.B. Heißklebepistole" 
-          required 
+        <input
+          ref="nameInput"
+          v-model="form.name"
+          type="text"
+          placeholder="z.B. Heißklebepistole"
+          required
         />
       </div>
 
@@ -134,17 +154,22 @@ const submitForm = async () => {
         <label>Ansprechpartner</label>
         <div v-for="(contact, index) in form.contacts" :key="index" class="contact-input-row">
           <input v-model="form.contacts[index]" type="text" placeholder="Name" />
-          <button v-if="form.contacts.length > 1" @click="removeContactField(index)" type="button" class="remove-btn">×</button>
+          <button
+            v-if="form.contacts.length > 1"
+            @click="removeContactField(index)"
+            type="button"
+            class="remove-btn"
+          >×</button>
         </div>
         <button @click="addContactField" type="button" class="add-contact-btn">+ Kontakt hinzufügen</button>
       </div>
     </div>
 
     <div class="actions">
-       <button v-if="editData" @click="emit('cancel')" class="cancel-btn" type="button">Abbrechen</button>
-       <button @click="submitForm" :disabled="loading" class="submit-btn" type="button">
-         {{ loading ? '...' : (editData ? 'Änderungen speichern' : 'Eintragen [Enter]') }}
-       </button>
+      <button v-if="editData" @click="emit('cancel')" class="cancel-btn" type="button">Abbrechen</button>
+      <button @click="submitForm" :disabled="loading" class="submit-btn" type="button">
+        {{ loading ? '...' : (editData ? 'Änderungen speichern' : 'Eintragen [Enter]') }}
+      </button>
     </div>
   </div>
 </template>
@@ -156,7 +181,7 @@ const submitForm = async () => {
   padding: 25px;
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   border: 1px solid #eee;
   transition: all 0.3s ease;
 }
@@ -167,13 +192,24 @@ const submitForm = async () => {
   gap: 15px;
 }
 
-.full-width { grid-column: span 2; }
+.full-width {
+  grid-column: span 2;
+}
 
-.field-group { display: flex; flex-direction: column; gap: 5px; }
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
 
-label { font-weight: bold; font-size: 0.9rem; color: #444; }
+label {
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: #444;
+}
 
-input, textarea {
+input,
+textarea {
   padding: 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
@@ -218,18 +254,18 @@ input, textarea {
   transition: background 0.2s;
 }
 
-.submit-btn:hover { background: #00a087; }
+.submit-btn:hover    { background: #00a087; }
 .submit-btn:disabled { background: #ccc; }
 
-/* Visuelles Feedback: Grünes Aufleuchten */
+/* Grünes Aufleuchten als visuelles Speicher-Feedback */
 .success-glow {
   animation: glow 1.5s ease-out;
 }
 
 @keyframes glow {
-  0% { box-shadow: 0 0 0px rgba(0, 184, 148, 0); border-color: #ddd; }
-  20% { box-shadow: 0 0 20px rgba(0, 184, 148, 0.4); border-color: #00b894; }
-  100% { box-shadow: 0 0 0px rgba(0, 184, 148, 0); border-color: #ddd; }
+  0%   { box-shadow: 0 0 0px rgba(0, 184, 148, 0);   border-color: #ddd;    }
+  20%  { box-shadow: 0 0 20px rgba(0, 184, 148, 0.4); border-color: #00b894; }
+  100% { box-shadow: 0 0 0px rgba(0, 184, 148, 0);   border-color: #ddd;    }
 }
 
 .header-row {
@@ -245,7 +281,9 @@ input, textarea {
   font-size: 0.9rem;
 }
 
-.fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.fade-enter-active,
+.fade-leave-active { transition: opacity 0.5s; }
 
+.fade-enter-from,
+.fade-leave-to     { opacity: 0; }
 </style>

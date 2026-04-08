@@ -3,6 +3,19 @@ import { onMounted, computed } from 'vue';
 import { useDocumentStore } from '@/stores/documents/documents';
 import { useAuthStore } from '@/stores/authentification/auth';
 
+/**
+ * FavoriteDocumentsDashboard
+ *
+ * Zeigt die Favoriten des eingeloggten Users als klickbare Liste an.
+ * Kann optional auf einen Scope gefiltert werden — ohne Scope-Prop
+ * werden alle Favoriten über alle Scopes hinweg angezeigt.
+ *
+ * Props:
+ *   scope — Optionaler Dokumenten-Scope (z.B. 'verwaltung').
+ *           Wenn gesetzt, werden nur Favoriten dieses Scopes angezeigt
+ *           und beim initialen Laden wird genau dieser Scope vom Backend geladen.
+ */
+
 const props = defineProps({
   scope: { type: String, default: null }
 });
@@ -11,25 +24,17 @@ const store = useDocumentStore();
 const authStore = useAuthStore();
 
 const displayedFavorites = computed(() => {
-  console.log("Docs im Store:", store.documents.length);
-  console.log("Scope Filter:", props.scope);
-  console.log("Erster Doc Scope:", store.documents[0]?.scope); // Prüfen, ob 'verwaltung' drinsteht
-  
   if (props.scope) {
     return store.favoriteItemsByScope(props.scope);
   }
-  return store.favoriteItems; 
+  return store.favoriteItems;
 });
 
 onMounted(async () => {
-  // WICHTIG: Wenn ein Scope vorhanden ist, laden wir spezifisch diesen
-  // Falls kein Scope da ist, laden wir standardmäßig 'verwaltung'
-  const targetScope = props.scope || 'verwaltung';
-  
-  if (store.documents.length === 0) {
-    await store.fetchDocuments(targetScope);
+  if (store.documents.length === 0 && props.scope) {
+    await store.fetchDocuments(props.scope);
   }
-  
+
   if (store.favorites.length === 0 && authStore.dbId) {
     await store.fetchFavorites();
   }
@@ -51,15 +56,17 @@ onMounted(async () => {
       </template>
     </div>
 
-    <div v-else v-for="item in displayedFavorites" :key="item.ms_id" class="fav-item">
-      <span class="icon">{{ item.is_folder ? '📁' : '📄' }}</span>
-      <a :href="item.share_url" target="_blank" class="name">
-        {{ item.name_original }}
-      </a>
-      <button class="remove-btn" @click="store.toggleFavorite(item.ms_id)" title="Entfernen">
-        ★
-      </button>
-    </div>
+    <template v-else>
+      <div v-for="item in displayedFavorites" :key="item.ms_id" class="fav-item">
+        <span class="icon">{{ item.is_folder ? '📁' : '📄' }}</span>
+        <a :href="item.share_url" target="_blank" class="name">
+          {{ item.name_original }}
+        </a>
+        <button class="remove-btn" @click="store.toggleFavorite(item.ms_id)" title="Aus Favoriten entfernen">
+          ★
+        </button>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -83,10 +90,13 @@ onMounted(async () => {
 
 .fav-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.icon { margin-right: 12px; font-size: 1.2rem; }
+.icon {
+  margin-right: 12px;
+  font-size: 1.2rem;
+}
 
 .name {
   flex-grow: 1;

@@ -3,7 +3,13 @@ import { ref } from 'vue';
 import FavoriteDocumentsDashboard from '@/components/documents/documentsDashboard/FavoriteDocumentsDashboard.vue';
 import TicketVisualization from '@/components/tickets/TicketVisualization.vue';
 
-// Status für die Sichtbarkeit der Sektionen
+/**
+ * dashboardpage
+ *
+ * Persönliche Übersichtsseite des eingeloggten Users.
+ * Zeigt Verwaltungsfavoriten und eigene Tickets in aufklappbaren Sektionen.
+ */
+
 const showFavorites = ref(true);
 const showTickets = ref(true);
 </script>
@@ -11,14 +17,13 @@ const showTickets = ref(true);
 <template>
   <div class="dashboard-container">
     <h1>Dashboard</h1>
-    
+
     <div class="dashboard-grid">
       <section class="dashboard-section">
         <h2 @click="showFavorites = !showFavorites" class="clickable-header">
           <span>⭐ Meine Verwaltungsfavoriten</span>
           <span class="toggle-icon">{{ showFavorites ? '−' : '+' }}</span>
         </h2>
-        
         <div v-show="showFavorites" class="section-content">
           <FavoriteDocumentsDashboard scope="verwaltung" />
         </div>
@@ -29,13 +34,11 @@ const showTickets = ref(true);
           <span>🎫 Meine Tickets</span>
           <span class="toggle-icon">{{ showTickets ? '−' : '+' }}</span>
         </h2>
-        
         <div v-show="showTickets" class="section-content">
           <TicketVisualization mode="personal" />
         </div>
       </section>
-
-      </div>
+    </div>
   </div>
 </template>
 
@@ -43,18 +46,17 @@ const showTickets = ref(true);
 .dashboard-container {
   padding: 20px;
   width: 100%;
-  max-width: 1400px; /* Etwas breiter für das Grid-Layout */
+  max-width: 1400px;
   margin: 0 auto;
-  
 }
 
-h1 { 
-  color: #000; 
-  margin-bottom: 20px; 
+h1 {
+  color: #000;
+  margin-bottom: 20px;
   text-align: center;
 }
 
-/* 1. Mobile First: Das Grid ist standardmäßig einspaltig */
+/* Mobile First: einspaltig */
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -62,12 +64,11 @@ h1 {
   width: 100%;
 }
 
-/* 2. Desktop Ansicht: Ab 1024px nebeneinander */
+/* Ab 1024px: zwei gleichbreite Spalten nebeneinander */
 @media (min-width: 1024px) {
   .dashboard-grid {
-    /* Erzeugt automatisch so viele Spalten wie Platz ist, mindestens 500px breit */
-    grid-template-columns: 1fr 1fr; /* Erzwingt genau 2 Spalten */
-    align-items: start; /* Verhindert, dass kleine Sektionen unschön gestreckt werden */
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
   }
 }
 
@@ -75,14 +76,13 @@ h1 {
   background: #fff;
   padding: 20px;
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   border: 1px solid #eee;
-  min-width: 0; 
+  min-width: 0;
   width: 100%;
   overflow: hidden;
 }
 
-/* Header Styling für den Toggle-Effekt */
 .clickable-header {
   font-size: 1.2rem;
   color: #34495e;
@@ -94,7 +94,7 @@ h1 {
   justify-content: space-between;
   align-items: center;
   transition: color 0.2s;
-  user-select: none; /* Verhindert Markierung beim schnellen Klicken */
+  user-select: none;
 }
 
 .clickable-header:hover {
@@ -108,12 +108,11 @@ h1 {
 }
 
 .section-content {
-  /* Optional: Kleiner Fade-In Effekt */
   animation: fadeIn 0.3s ease-out;
 }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 </style>

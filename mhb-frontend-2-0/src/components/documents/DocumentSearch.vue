@@ -3,23 +3,36 @@ import { ref, watch } from 'vue';
 import { useDocumentStore } from '@/stores/documents/documents';
 import DocumentOptionsMain from '@/components/documents/documentOptionsMenu/DocumentOptionsMain.vue';
 
+/**
+ * DocumentSearch
+ *
+ * Globale Suchleiste für Dokumente mit Tastaturnavigation.
+ * Suche läuft über den Store-Getter `filteredDocuments` (Volltext über
+ * Originalnamen und Aliase, ab 2 Zeichen).
+ *
+ * Tastatursteuerung:
+ *   ArrowDown / ArrowUp — navigiert durch die Ergebnisliste
+ *   Enter               — öffnet das markierte Dokument
+ *   Escape              — leert die Suche
+ */
+
 const store = useDocumentStore();
 const selectedItemForOptions = ref(null);
 const showOptions = ref(false);
 
 watch(() => store.searchQuery, () => {
-  store.searchSelectedIndex = -1;
+  store.setSearchSelectedIndex(-1);
 });
 
-// Zentrale Funktion zum Öffnen des Dokuments
 const openDocument = (doc) => {
-  if (doc && doc.share_url) {
+  if (doc?.share_url) {
     window.open(doc.share_url, '_blank');
   }
 };
 
 const handleKeydown = (e) => {
   const results = store.filteredDocuments;
+
   if (e.key === 'Escape') {
     clearSearch();
     return;
@@ -27,10 +40,10 @@ const handleKeydown = (e) => {
   if (!results.length) return;
 
   if (e.key === 'ArrowDown') {
-    store.searchSelectedIndex = Math.min(store.searchSelectedIndex + 1, results.length - 1);
+    store.setSearchSelectedIndex(Math.min(store.searchSelectedIndex + 1, results.length - 1));
     e.preventDefault();
   } else if (e.key === 'ArrowUp') {
-    store.searchSelectedIndex = Math.max(store.searchSelectedIndex - 1, 0);
+    store.setSearchSelectedIndex(Math.max(store.searchSelectedIndex - 1, 0));
     e.preventDefault();
   } else if (e.key === 'Enter' && store.searchSelectedIndex >= 0) {
     openDocument(results[store.searchSelectedIndex]);
@@ -42,10 +55,9 @@ const openOptions = (doc) => {
   showOptions.value = true;
 };
 
-// Tooltip-Logik (wie im DocumentTree)
+/** Erzeugt den Breadcrumb-Pfad als Tooltip-String für das Dokument-Icon. */
 const getBreadcrumbTooltip = (doc) => {
-  const pathArray = store.getPath(doc.ms_id, null);
-  return pathArray.map(p => p.name_original).join(' > ');
+  return store.getPath(doc.ms_id).map(p => p.name_original).join(' > ');
 };
 
 const clearSearch = () => {
@@ -58,24 +70,24 @@ const clearSearch = () => {
     <div class="search-container">
       <div class="search-input-wrapper">
         <span class="search-icon">🔍</span>
-        <input 
-          v-model="store.searchQuery" 
-          type="text" 
+        <input
+          v-model="store.searchQuery"
+          type="text"
           placeholder="Suche... (Pfeiltasten zum Navigieren)"
           class="search-input"
-          @focus="store.searchSelectedIndex = -1"
+          @focus="store.setSearchSelectedIndex(-1)"
         />
         <button v-if="store.searchQuery" @click="clearSearch" class="clear-btn">✕</button>
       </div>
 
       <div v-if="store.searchQuery && store.filteredDocuments.length > 0" class="results-overlay">
-        <div 
-          v-for="(doc, index) in store.filteredDocuments" 
-          :key="doc.ms_id" 
+        <div
+          v-for="(doc, index) in store.filteredDocuments"
+          :key="doc.ms_id"
           class="result-item"
           :class="{ 'is-selected': index === store.searchSelectedIndex }"
-          @mouseenter="store.searchSelectedIndex = index"
-          @click="openDocument(doc)" 
+          @mouseenter="store.setSearchSelectedIndex(index)"
+          @click="openDocument(doc)"
         >
           <div class="result-content">
             <div class="item-main">
@@ -84,7 +96,7 @@ const clearSearch = () => {
               </span>
               <span class="name">{{ doc.name_original }}</span>
             </div>
-            
+
             <div v-if="doc.aliases && doc.aliases.length > 0" class="alias-tags">
               <span v-for="alias in doc.aliases" :key="alias" class="alias-tag">
                 🏷️ {{ alias }}
@@ -103,16 +115,15 @@ const clearSearch = () => {
       </div>
     </div>
 
-    <DocumentOptionsMain 
-      v-if="showOptions && selectedItemForOptions" 
-      :item="selectedItemForOptions" 
+    <DocumentOptionsMain
+      v-if="showOptions && selectedItemForOptions"
+      :item="selectedItemForOptions"
       @close="showOptions = false"
     />
   </div>
 </template>
 
 <style scoped>
-/* Zentrierung der gesamten Komponente */
 .search-wrapper {
   display: flex;
   justify-content: center;
@@ -123,16 +134,15 @@ const clearSearch = () => {
 .search-container {
   position: relative;
   width: 100%;
-  max-width: 800px; /* Breite der Suchbox */
+  max-width: 800px;
 }
 
-/* Die große ovale Box */
 .search-input-wrapper {
   display: flex;
   align-items: center;
   background: white;
   border: 2px solid #0e64a6;
-  border-radius: 50px; /* Voll-Oval */
+  border-radius: 50px;
   padding: 10px 25px;
   box-shadow: 0 4px 15px rgba(14, 100, 166, 0.1);
   transition: box-shadow 0.3s ease;
@@ -142,7 +152,10 @@ const clearSearch = () => {
   box-shadow: 0 4px 20px rgba(14, 100, 166, 0.25);
 }
 
-.search-icon { margin-right: 15px; font-size: 1.2rem; }
+.search-icon {
+  margin-right: 15px;
+  font-size: 1.2rem;
+}
 
 .search-input {
   border: none;
@@ -161,7 +174,6 @@ const clearSearch = () => {
   padding: 5px;
 }
 
-/* Ergebnisliste Styling */
 .results-overlay {
   position: absolute;
   top: 100%;
@@ -170,7 +182,7 @@ const clearSearch = () => {
   background: white;
   border: 1px solid #ccc;
   border-radius: 15px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   max-height: 400px;
   overflow-y: auto;
@@ -187,22 +199,40 @@ const clearSearch = () => {
   transition: background 0.2s;
 }
 
-.result-item:last-child { border-bottom: none; }
+.result-item:last-child {
+  border-bottom: none;
+}
 
 .result-item.is-selected {
   background-color: #f0f7ff;
   border-left: 5px solid #0e64a6;
 }
 
-.result-content { flex-grow: 1; text-align: left; }
+/*
+ * pointer-events auf dem Content deaktivieren, damit Klicks auf .result-item
+ * durchgeleitet werden. Interaktive Elemente (options-trigger) überschreiben
+ * das lokal mit @click.stop.
+ */
+.result-content {
+  flex-grow: 1;
+  text-align: left;
+  pointer-events: none;
+}
 
-.item-main { display: flex; align-items: center; gap: 10px; font-weight: 500; color: #333; }
+.result-item * {
+  pointer-events: auto;
+}
 
-.breadcrumb {
-  font-size: 0.75rem;
-  color: #777;
-  margin-top: 3px;
-  padding-left: 28px; /* Alignment mit dem Namen */
+.item-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  color: #333;
+}
+
+.icon {
+  cursor: help;
 }
 
 .options-trigger {
@@ -221,7 +251,7 @@ const clearSearch = () => {
   padding: 15px;
   border-radius: 15px;
   margin-top: 10px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   color: #666;
   text-align: center;
 }
@@ -241,19 +271,5 @@ const clearSearch = () => {
   padding: 2px 8px;
   border-radius: 10px;
   border: 1px solid #ddd;
-}
-
-.icon {
-  cursor: help; /* Signalisiert, dass es hier Infos per Hover gibt */
-}
-
-/* Fix für Click-Area: Sicherstellen, dass der Content nicht den Klick schluckt */
-.result-content {
-  flex-grow: 1;
-  pointer-events: none; /* Klicks gehen durch auf .result-item */
-}
-
-.result-item * {
-  pointer-events: auto; /* Buttons und Links innerhalb sollen wieder klickbar sein */
 }
 </style>

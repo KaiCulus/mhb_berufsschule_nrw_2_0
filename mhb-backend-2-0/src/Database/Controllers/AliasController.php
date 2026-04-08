@@ -38,7 +38,7 @@ class AliasController extends BaseController
      * @param string $docId    Microsoft-Dokument-ID aus der URL
      * @param string $userId   URL-Parameter — wird ignoriert, Session-ID wird verwendet
      */
-    public function getAliases(string $docId, string $userId): void
+    public function getAliases(string $scope, string $docId): void
     {
         // User-ID aus der Session — URL-Parameter $userId wird bewusst ignoriert
         $user = AuthMiddleware::check();

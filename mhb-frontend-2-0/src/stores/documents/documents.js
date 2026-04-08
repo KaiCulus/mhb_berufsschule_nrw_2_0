@@ -2,147 +2,220 @@ import { defineStore } from 'pinia';
 import axios from '@/scripts/axios';
 import { useAuthStore } from '../authentification/auth';
 
+/**
+ * Document Store
+ *
+ * Verwaltet den gesamten Dokumenten-State der Anwendung:
+ * - Dokumentenbaum (hierarchisch via parent_id)
+ * - Favoriten des eingeloggten Users
+ * - Suchzustand
+ * - Alias-Operationen
+ *
+ * Alle API-Calls laufen über den zentralen Axios-Client (@/scripts/axios),
+ * der Auth-Header und Basis-URL bereits konfiguriert.
+ */
 export const useDocumentStore = defineStore('documents', {
   state: () => ({
     documents: [],
     favorites: [],
     searchQuery: '',
     searchSelectedIndex: -1,
-    loading: false
+    loading: false,
   }),
+
   getters: {
-    // Wandelt die flache Liste in eine Baumstruktur um (für die Anzeige)
+    /**
+     * Gibt alle direkten Kinder eines Knotens zurück.
+     * Wird vom DocumentTree für das rekursive Rendering genutzt.
+     * @param {string|null} parentId - ms_id des Elternknotens, null → Root
+     */
     getTree: (state) => (parentId) => {
-        // Wenn gar keine ID übergeben wurde, versuchen wir es mit 'root'
-        const searchId = parentId ? String(parentId).trim() : 'root';
-        
-        return state.documents.filter(d => {
-            // Sicherstellen, dass itemParentId existiert, sonst zu 'root' oder leer mappen
-            const itemParentId = d.parent_id ? String(d.parent_id).trim() : 'root';
-            return itemParentId === searchId;
-        });
+      const searchId = parentId ? String(parentId).trim() : 'root';
+      return state.documents.filter((d) => {
+        const itemParentId = d.parent_id ? String(d.parent_id).trim() : 'root';
+        return itemParentId === searchId;
+      });
     },
+
+    /** Alle Dokumente, die der User als Favorit markiert hat. */
     favoriteItems: (state) => {
-      return state.documents.filter(doc => state.favorites.includes(doc.ms_id));
+      return state.documents.filter((doc) => state.favorites.includes(doc.ms_id));
     },
+
+    /**
+     * Favoriten gefiltert nach Scope (z.B. 'verwaltung', 'paedagogik').
+     * @param {string} scope
+     */
     favoriteItemsByScope: (state) => (scope) => {
-        if (!scope) return [];
-        return state.documents.filter(doc => {
-            const isFavorite = state.favorites.includes(doc.ms_id);
-            const matchesScope = String(doc.scope).toLowerCase() === String(scope).toLowerCase();
-            return isFavorite && matchesScope;
-        });
+      if (!scope) return [];
+      return state.documents.filter((doc) => {
+        const isFavorite = state.favorites.includes(doc.ms_id);
+        const matchesScope =
+          String(doc.scope).toLowerCase() === String(scope).toLowerCase();
+        return isFavorite && matchesScope;
+      });
     },
+
+    /**
+     * Volltextsuche über Originalname und Aliase.
+     * Gibt erst ab 2 Zeichen Ergebnisse zurück, um zu viele Treffer zu vermeiden.
+     */
     filteredDocuments: (state) => {
-        const query = state.searchQuery.toLowerCase().trim();
-        
-        // Wenn die Suche leer ist, geben wir sofort ein leeres Array zurück
-        if (!query || query.length < 2) return []; // Optional: Erst ab 2 Zeichen suchen
+      const query = state.searchQuery.toLowerCase().trim();
+      if (!query || query.length < 2) return [];
 
-        return state.documents.filter(doc => {
-            // 1. Suche im Originalnamen
-            const nameMatch = doc.name_original && 
-                            doc.name_original.toLowerCase().includes(query);
+      return state.documents.filter((doc) => {
+        const nameMatch =
+          doc.name_original && doc.name_original.toLowerCase().includes(query);
+        const aliasMatch =
+          Array.isArray(doc.aliases) &&
+          doc.aliases.some((a) => a && a.toLowerCase().includes(query));
+        return nameMatch || aliasMatch;
+      });
+    },
 
-            // 2. Suche in Aliasen (nur wenn das Array existiert und nicht leer ist)
-            const aliasMatch = Array.isArray(doc.aliases) && doc.aliases.some(a => {
-            return a && a.toLowerCase().includes(query);
-            });
+    /**
+     * Gibt den Pfad von Root bis zum Zieldokument zurück (Breadcrumb).
+     * Direkte Root-Kinder (parent_id === 'root') werden korrekt eingeschlossen.
+     * @param {string} targetId - ms_id des Zieldokuments
+     */
+    getPath: (state) => (targetId) => {
+      const path = [];
+      let current = state.documents.find((d) => d.ms_id === targetId);
 
-            return nameMatch || aliasMatch;
-        });
-    }
+      while (current && current.parent_id) {
+        path.unshift(current);
+        if (current.parent_id === 'root') break;
+        current = state.documents.find((d) => d.ms_id === current.parent_id);
+      }
+      return path;
+    },
   },
+
   actions: {
-      async fetchDocuments(scope) {
-          this.loading = true;
-          try {
-              const response = await axios.get(`/api/documents/${scope}`);
-              
-              // WICHTIG: Jedes Dokument bekommt hier aktiv den Scope-Stempel
-              const documentsWithScope = response.data.map(doc => ({
-                  ...doc,
-                  scope: scope // Dies setzt 'verwaltung' in jedes Objekt
-              }));
+    /**
+     * Lädt alle Dokumente eines Scopes vom Backend und stempelt
+     * jeden Eintrag mit dem Scope-Wert (wird für Scope-Filterung benötigt).
+     * @param {string} scope - z.B. 'verwaltung'
+     */
+    async fetchDocuments(scope) {
+      this.loading = true;
+      try {
+        const response = await axios.get(`/api/documents/${scope}`);
+        this.documents = response.data.map((doc) => ({ ...doc, scope }));
+        console.log(`${this.documents.length} Dokumente für Scope "${scope}" geladen.`);
+      } catch (error) {
+        console.error('Fehler beim Laden der Dokumente:', error);
+      } finally {
+        this.loading = false;
+      }
+    },
 
-              this.documents = documentsWithScope;
-              
-              console.log(`Erfolgreich ${this.documents.length} Dokumente für Scope ${scope} geladen.`);
-          } catch (error) {
-              console.error("Fehler beim Laden der Dokumente:", error);
-          } finally {
-              this.loading = false;
-          }
-      },
-        getPath(targetId, rootId = 'root') { // Default auf 'root'
-            const path = [];
-            let current = this.documents.find(d => d.ms_id === targetId);
-            
-            while (current && current.ms_id !== rootId && current.parent_id !== 'root') {
-                path.unshift(current);
-                current = this.documents.find(d => d.ms_id === current.parent_id);
-            }
-            return path;
-        },
-        async fetchFavorites() {
-            // WICHTIG: Store innerhalb der Funktion initialisieren
-            const authStore = useAuthStore();        
-            if (!authStore.dbId) return;
-            try {
-                const response = await axios.get(`/api/favorites/${authStore.dbId}`);
-                this.favorites = response.data;
-            } catch (error) {
-                console.error("Fehler beim Laden der Favoriten:", error);
-            }
-        },
+    /**
+     * Lädt die Favoriten-IDs des eingeloggten Users.
+     * Nutzt die dbId aus dem AuthStore als User-Identifier.
+     */
+    async fetchFavorites() {
+      const authStore = useAuthStore();
+      if (!authStore.dbId) return;
+      try {
+        const response = await axios.get(`/api/favorites/${authStore.dbId}`);
+        this.favorites = response.data;
+      } catch (error) {
+        console.error('Fehler beim Laden der Favoriten:', error);
+      }
+    },
 
-        async toggleFavorite(documentId) {
-            const authStore = useAuthStore();        
-            if (!authStore.dbId) {
-                console.error("User nicht eingeloggt oder keine DB-ID vorhanden.");
-                return;
-            }
-            const isFav = this.favorites.includes(documentId);        
-            try {
-                if (isFav) {
-                    // Bei DELETE muss der Body oft in ein 'data' Objekt gewickelt werden
-                    await axios.delete(`/api/favorites`, { 
-                        data: { userId: authStore.dbId, docId: documentId } 
-                    });
-                    this.favorites = this.favorites.filter(id => id !== documentId);
-                } else {
-                    await axios.post(`/api/favorites`, { 
-                        userId: authStore.dbId, 
-                        docId: documentId 
-                    });
-                    this.favorites.push(documentId);
-                }
-            } catch (error) {
-                console.error("Favoriten-Update fehlgeschlagen", error);
-            }
-        },
-        setSearchSelectedIndex(index) {
-            this.searchSelectedIndex = index;
-        },
-        async fetchAliases(docId) {
-            const authStore = useAuthStore();
-            const response = await axios.get(`/api/aliases/${docId}/${authStore.dbId}`);
-            return response.data; // Wir speichern Aliase lokal in der Komponente, da sie flüchtig sind
-        },
-        async suggestAlias(docId, aliasText) {
-            const authStore = useAuthStore();
-            await axios.post(`/api/aliases`, {
-                docId: docId,
-                aliasText: aliasText,
-                userId: authStore.dbId
-            });
-        },
-        async toggleAliasVote(aliasId) {
-            const authStore = useAuthStore();
-            await axios.post(`/api/aliases/vote`, {
-                aliasId: aliasId,
-                userId: authStore.dbId
-            });
+    /**
+     * Toggled den Favoritenstatus eines Dokuments optimistisch im UI
+     * und synchronisiert im Hintergrund mit dem Backend.
+     * @param {string} documentId - ms_id des Dokuments
+     */
+    async toggleFavorite(documentId) {
+      const authStore = useAuthStore();
+      if (!authStore.dbId) {
+        console.error('Kein eingeloggter User — Favorit kann nicht geändert werden.');
+        return;
+      }
+
+      const isFav = this.favorites.includes(documentId);
+      try {
+        if (isFav) {
+          await axios.delete('/api/favorites', {
+            data: { userId: authStore.dbId, docId: documentId },
+          });
+          this.favorites = this.favorites.filter((id) => id !== documentId);
+        } else {
+          await axios.post('/api/favorites', {
+            userId: authStore.dbId,
+            docId: documentId,
+          });
+          this.favorites.push(documentId);
         }
-    }
+      } catch (error) {
+        console.error('Favoriten-Update fehlgeschlagen:', error);
+      }
+    },
+
+    /** Setzt den aktuell per Tastatur markierten Sucheintrag. */
+    setSearchSelectedIndex(index) {
+      this.searchSelectedIndex = index;
+    },
+
+    /** Leert die Suche und setzt den Selektions-Index zurück. */
+    clearSearch() {
+      this.searchQuery = '';
+      this.searchSelectedIndex = -1;
+    },
+
+    /**
+     * Lädt alle Aliase für ein Dokument.
+     * Aliase werden lokal in der aufrufenden Komponente gehalten (flüchtig).
+     * @param {string} scope - Dokumenten-Scope (z.B. 'verwaltung')
+     * @param {number} docId - Datenbank-ID des Dokuments
+     */
+    async fetchAliases(scope, docId) {
+      try {
+        const response = await axios.get(`/api/aliases/${scope}/${docId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Fehler beim Laden der Aliase:', error);
+        return [];
+      }
+    },
+
+    /**
+     * Schlägt einen neuen Alias für ein Dokument vor.
+     * @param {number} docId - Datenbank-ID des Dokuments
+     * @param {string} aliasText - Der vorgeschlagene Aliasname
+     */
+    async suggestAlias(docId, aliasText) {
+      const authStore = useAuthStore();
+      try {
+        await axios.post('/api/aliases', {
+          docId,
+          aliasText,
+          userId: authStore.dbId,
+        });
+      } catch (error) {
+        console.error('Alias-Vorschlag fehlgeschlagen:', error);
+      }
+    },
+
+    /**
+     * Toggelt die Stimme des eingeloggten Users für einen Alias.
+     * @param {number} aliasId
+     */
+    async toggleAliasVote(aliasId) {
+      const authStore = useAuthStore();
+      try {
+        await axios.post('/api/aliases/vote', {
+          aliasId,
+          userId: authStore.dbId,
+        });
+      } catch (error) {
+        console.error('Alias-Vote fehlgeschlagen:', error);
+      }
+    },
+  },
 });

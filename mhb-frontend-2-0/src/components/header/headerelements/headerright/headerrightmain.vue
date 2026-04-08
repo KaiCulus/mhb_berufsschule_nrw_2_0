@@ -1,31 +1,23 @@
 <script setup>
-  import { useAuthStore } from '@/stores/authentification/auth'
-  import { useRouter } from 'vue-router'
+import LogoutButton from '@/components/LoginStatus/LogoutButton.vue';
 
-   import LogoutButton from '@/components/LoginStatus/LogoutButton.vue'
-
-  const auth = useAuthStore()
-  const router = useRouter()  
-  
+/**
+ * headerrightmain — Header-Rechtsbereich
+ *
+ * Zeigt den Logout-Button an. Wird nur gerendert wenn der User
+ * eingeloggt ist (gesteuert durch die v-if-Bedingung in headermain).
+ */
 </script>
 
 <template>
-  <div>
+  <div id="header-right">
     <LogoutButton />
   </div>
 </template>
 
 <style scoped>
-  #header-right {
-    display: flex;
-    align-items: center;
-  }
-
-  #header-right span {
-    font-size: 2em;
-  }
-
-  #header-right:hover{
-    cursor: pointer;
-  }
+#header-right {
+  display: flex;
+  align-items: center;
+}
 </style>

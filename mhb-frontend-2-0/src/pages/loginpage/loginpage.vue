@@ -1,5 +1,12 @@
 <script setup>
-  import LoginButton from '@/components/LoginStatus/LoginButton.vue'
+import LoginButton from '@/components/LoginStatus/LoginButton.vue';
+
+/**
+ * loginpage
+ *
+ * Einstiegspunkt für nicht eingeloggte User.
+ * Delegiert die gesamte Login-Logik (OAuth-Redirect) an LoginButton.
+ */
 </script>
 
 <template>
@@ -7,7 +14,3 @@
     <LoginButton />
   </div>
 </template>
-
-<style scoped>
-
-</style>
