@@ -5,6 +5,7 @@ use Kai\MhbBackend20\Auth\Services\OAuthService;
 use Kai\MhbBackend20\Database\DB;
 use Kai\MhbBackend20\Common\Cipher;
 use PDO;
+use phpDocumentor\Reflection\PseudoTypes\False_;
 
 class AuthMiddleware {
     
@@ -63,7 +64,7 @@ class AuthMiddleware {
         // HIER IST DER FIX: 
         // Statt respondError(403) bei fehlendem Record, geben wir id => 0 zurück.
         return [
-            'id' => $record ? (int)$record['id'] : 0, 
+            'id' => $record ? (int)$record['id'] : throw new \RuntimeException('User not found in DB. Please log in via OAuth first.'), 
             'name' => $record ? Cipher::decrypt($record['display_name_encrypted'], $encKey) : ($msData['name'] ?? 'Neuer User'),
             'email' => $email,
             'groups' => $msData['groups'] ?? [],
@@ -77,12 +78,14 @@ class AuthMiddleware {
     public static function hasGroup(string $envKey): bool {
         // Wir rufen check() nicht direkt auf, um Endlosschleifen zu vermeiden, 
         // prüfen aber, ob die Session valide ist.
-        if (session_status() === PHP_SESSION_NONE) session_start();
+        if (session_status() === PHP_SESSION_NONE){
+            error_log("Keine PHP Session gestartet");
+            return False;
+        } 
         
         if (!isset($_SESSION['user'])) {
-            $user = self::check(); // Triggert Auth-Check falls noch nicht geschehen
-        } else {
-            $user = $_SESSION['user'];
+            error_log("Kein User in der Session");
+            return False;
         }
 
         $userGroups = $_SESSION['user_groups'] ?? $user['groups'] ?? [];
