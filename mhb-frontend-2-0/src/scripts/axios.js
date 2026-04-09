@@ -22,7 +22,7 @@ import { useAuthStore } from '@/stores/authentification/auth'
  */
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_MHB_BACKEND_URL || '/mhb_2_0/mhb_be',
+  baseURL: import.meta.env.VITE_MHB_BACKEND_URL || '/mhb/mhb_be',
   withCredentials: true, // Session-Cookie bei jedem Request mitsenden
 })
 

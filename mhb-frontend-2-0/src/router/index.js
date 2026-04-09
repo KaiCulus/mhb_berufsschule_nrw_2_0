@@ -62,6 +62,12 @@ const router = createRouter({
       component: () => import('@/pages/materialsearchpage/materialsearchpage.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/wissen',
+      name: 'wissen',
+      component: () => import('@/pages/wissenssammlungPage/wissenssammlungPage.vue'),
+      meta: { requiresAuth: true },
+    },
 
     // ── Fallback ────────────────────────────────────────────────────────────
     {

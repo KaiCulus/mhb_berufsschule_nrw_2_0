@@ -1,42 +1,42 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 import axios from '@/scripts/axios';
-import { useAuthStore } from '@/stores/authentification/auth';
+
+/**
+ * TicketSubscription — Ticket folgen / nicht mehr folgen
+ *
+ * Toggelt das Abonnement des eingeloggten Users für ein Ticket.
+ * Der initiale Status wird beim Toggle vom Server zurückgegeben und
+ * lokal gespeichert — kein separater Status-Check beim Mounten nötig,
+ * da der Server den aktuellen Zustand pro Toggle-Request zurückliefert.
+ *
+ * Props:
+ *   ticketId — ID des Tickets
+ */
 
 const props = defineProps({
-  ticketId: { type: Number, required: true }
+  ticketId: { type: Number, required: true },
 });
 
 const isSubscribed = ref(false);
-const authStore = useAuthStore();
-
-const checkStatus = async () => {
-  // Wir laden die Ticket-Details kurz, um zu sehen ob der User in den Subs steht
-  // Alternativ: Der Controller liefert das im getDetail() direkt mit.
-  try {
-    const response = await axios.get(`/api/tickets/detail/${props.ticketId}`);
-    // Einfache Prüfung: Ist die eigene ID in der (noch zu liefernden) Abonnentenliste?
-    // Für diesen Entwurf triggern wir einfach den Toggle-Status vom Server.
-  } catch (e) { /* ... */ }
-};
 
 const toggleSub = async () => {
   try {
-    const response = await axios.post('/api/tickets/subscribe', { 
-      ticketId: props.ticketId 
+    const response = await axios.post('/api/tickets/subscribe', {
+      ticketId: props.ticketId,
     });
     isSubscribed.value = response.data.subscription === 'subscribed';
   } catch (error) {
-    console.error("Subscription fehlgeschlagen");
+    console.error('Subscription fehlgeschlagen:', error);
   }
 };
 </script>
 
 <template>
-  <button 
-    @click="toggleSub" 
+  <button
+    @click="toggleSub"
     :class="['sub-btn', { 'is-active': isSubscribed }]"
-    title="Ticket folgen (Benachrichtigung bei Änderungen)"
+    :title="isSubscribed ? 'Ticket nicht mehr folgen' : 'Ticket folgen (Benachrichtigung bei Änderungen)'"
   >
     <span v-if="isSubscribed">🔔 Folge ich</span>
     <span v-else>🔕 Folgen</span>
@@ -53,6 +53,7 @@ const toggleSub = async () => {
   font-size: 0.85rem;
   transition: all 0.2s;
 }
+
 .sub-btn.is-active {
   background: #f1c40f;
   border-color: #f39c12;

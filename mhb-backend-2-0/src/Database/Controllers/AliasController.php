@@ -36,7 +36,7 @@ class AliasController extends BaseController
      * Markiert zusätzlich welche Aliase der aktuelle User bereits gevoted hat.
      *
      * @param string $docId    Microsoft-Dokument-ID aus der URL
-     * @param string $userId   URL-Parameter — wird ignoriert, Session-ID wird verwendet
+     * @param string $scope    Scope für die Zuweisung nach Dokumentengruppen. TODO:Implementieren   
      */
     public function getAliases(string $scope, string $docId): void
     {

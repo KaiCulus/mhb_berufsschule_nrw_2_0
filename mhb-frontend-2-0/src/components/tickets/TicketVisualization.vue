@@ -4,12 +4,28 @@ import axios from '@/scripts/axios';
 import { useAuthStore } from '@/stores/authentification/auth';
 import TicketDetailsMain from '@/components/tickets/TicketVisualizationComponents/TicketDetailsMain.vue';
 import TicketSubscribeRoom from '@/components/tickets/TicketVisualizationComponents/TicketVisualizationSubComponents/TicketSubscribeRoom.vue';
+
+/**
+ * TicketVisualization — Ticket-Übersichtsliste
+ *
+ * Zeigt alle oder nur eigene Tickets als filterbares, durchsuchbares Grid.
+ * Ein Klick auf "Details" öffnet TicketDetailsMain als Modal.
+ *
+ * Modi:
+ *   'all'      — Alle Tickets (Ticketseite, für Admins/Bearbeiter)
+ *   'personal' — Nur eigene Tickets (Dashboard); zeigt zusätzlich die
+ *                Raum-Abo-Verwaltung für Tickets (TicketSubscribeRoom)
+ *
+ * Props:
+ *   mode — 'all' | 'personal', default: 'all'
+ */
+
 const props = defineProps({
-  mode: { 
-    type: String, 
-    default: 'all', // 'all' für die Ticketseite, 'personal' für das Dashboard
-    validator: (value) => ['all', 'personal'].includes(value)
-  }
+  mode: {
+    type: String,
+    default: 'all',
+    validator: (value) => ['all', 'personal'].includes(value),
+  },
 });
 
 const authStore = useAuthStore();
@@ -18,49 +34,51 @@ const loading = ref(true);
 const searchQuery = ref('');
 const selectedTicketId = ref(null);
 const selectedCategory = ref('all');
+
 const categories = [
-  { value: 'all', label: 'Alle Kategorien' },
-  { value: 'network', label: 'Netzwerk' },
+  { value: 'all',        label: 'Alle Kategorien' },
+  { value: 'network',    label: 'Netzwerk' },
   { value: 'it_support', label: 'IT-Support' },
-  { value: 'facility', label: 'Gebäude/Hausmeister' }
+  { value: 'facility',   label: 'Gebäude/Hausmeister' },
 ];
+
+/** Farben und Labels für alle möglichen Ticket-Status-Werte. */
+const statusConfig = {
+  open:                          { label: 'Offen',               color: '#e74c3c' },
+  in_progress:                   { label: 'In Bearbeitung',      color: '#3498db' },
+  processing_paused:             { label: 'Pausiert',            color: '#95a5a6' },
+  waiting_for_external_response: { label: 'Wartet auf Extern',   color: '#f1c40f' },
+  resolved_by_staff:             { label: 'Erledigt (Fachkraft)', color: '#2ecc71' },
+  closed:                        { label: 'Geschlossen',          color: '#27ae60' },
+};
 
 const fetchTickets = async () => {
   loading.value = true;
   try {
-    const url = props.mode === 'personal' 
-      ? `/api/tickets/user/${authStore.dbId}` 
+    const url = props.mode === 'personal'
+      ? `/api/tickets/user/${authStore.dbId}`
       : '/api/tickets';
     const response = await axios.get(url);
     tickets.value = response.data;
   } catch (error) {
-    console.error("Fehler beim Laden der Tickets:", error);
+    console.error('Fehler beim Laden der Tickets:', error);
   } finally {
     loading.value = false;
   }
 };
 
-// Status-Mapping für Farben und Labels
-const statusConfig = {
-  open: { label: 'Offen', color: '#e74c3c' },
-  in_progress: { label: 'In Bearbeitung', color: '#3498db' },
-  processing_paused: { label: 'Pausiert', color: '#95a5a6' },
-  waiting_for_external_response: { label: 'Wartet auf Extern', color: '#f1c40f' },
-  resolved_by_staff: { label: 'Erledigt (Fachkraft)', color: '#2ecc71' },
-  closed: { label: 'Geschlossen', color: '#27ae60' }
-};
-
+/** Kombinierter Filter: erst Kategorie, dann Freitextsuche über Titel, Raum und Ersteller. */
 const filteredTickets = computed(() => {
   let result = tickets.value;
-  // Erst nach Kategorie filtern
+
   if (selectedCategory.value !== 'all') {
     result = result.filter(t => t.category === selectedCategory.value);
   }
-  // Dann nach Suchbegriff filtern
+
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
-    result = result.filter(t => 
-      t.title.toLowerCase().includes(q) || 
+    result = result.filter(t =>
+      t.title.toLowerCase().includes(q) ||
       t.room?.toLowerCase().includes(q) ||
       t.creator_name?.toLowerCase().includes(q)
     );
@@ -74,12 +92,14 @@ onMounted(fetchTickets);
 
 <template>
   <div class="visualization-wrapper">
+    <!-- Raum-Abo-Verwaltung nur im persönlichen Modus (Dashboard) -->
     <TicketSubscribeRoom v-if="mode === 'personal'" />
+
     <div class="controls">
-      <input 
-        v-model="searchQuery" 
-        type="text" 
-        placeholder="Tickets durchsuchen (Titel, Raum, Name)..." 
+      <input
+        v-model="searchQuery"
+        type="text"
+        placeholder="Tickets durchsuchen (Titel, Raum, Name)..."
         class="search-bar"
       />
       <select v-model="selectedCategory" class="category-select">
@@ -87,7 +107,7 @@ onMounted(fetchTickets);
           {{ cat.label }}
         </option>
       </select>
-      <button @click="fetchTickets" class="refresh-btn">🔄</button>
+      <button @click="fetchTickets" class="refresh-btn" title="Neu laden">🔄</button>
     </div>
 
     <div v-if="loading" class="loading">Lade Tickets...</div>
@@ -103,8 +123,8 @@ onMounted(fetchTickets);
 
         <div class="card-body">
           <h3>{{ ticket.title }}</h3>
-          <p class="location">📍 {{ ticket.building }} - {{ ticket.room }}</p>
-          <p class="meta">Von: {{ ticket.creator_name }} | {{ new Date(ticket.created_at).toLocaleDateString() }}</p>
+          <p class="location">📍 {{ ticket.building }} – {{ ticket.room }}</p>
+          <p class="meta">Von: {{ ticket.creator_name }} | {{ new Date(ticket.created_at).toLocaleDateString('de-DE') }}</p>
         </div>
 
         <div class="card-footer">
@@ -112,20 +132,19 @@ onMounted(fetchTickets);
             Details ansehen
           </button>
         </div>
-        
-        
       </div>
     </div>
-    <TicketDetailsMain 
-      v-if="selectedTicketId" 
-      :ticket-id="selectedTicketId" 
-      @close="selectedTicketId = null"
-      @refresh="fetchTickets"
-    />
 
     <div v-if="!loading && filteredTickets.length === 0" class="no-data">
       Keine Tickets gefunden.
     </div>
+
+    <TicketDetailsMain
+      v-if="selectedTicketId"
+      :ticket-id="selectedTicketId"
+      @close="selectedTicketId = null"
+      @refresh="fetchTickets"
+    />
   </div>
 </template>
 
@@ -134,17 +153,17 @@ onMounted(fetchTickets);
   width: 100%;
 }
 
-/* 1. Basis-Styles (Mobile First) */
+/* Mobile First: Controls untereinander */
 .controls {
   display: flex;
-  flex-direction: column; /* Untereinander auf dem Handy */
+  flex-direction: column;
   gap: 12px;
   margin-bottom: 20px;
 }
 
-.search-bar, 
+.search-bar,
 .category-select {
-  width: 100%; /* Volle Breite auf dem Handy */
+  width: 100%;
   padding: 12px;
   border-radius: 8px;
   border: 1px solid #ddd;
@@ -157,20 +176,20 @@ onMounted(fetchTickets);
   border: 1px solid #ddd;
   background: #f8f9fa;
   cursor: pointer;
-  align-self: flex-end; /* Button rechtsbündig auf Mobile */
+  align-self: flex-end;
 }
 
-/* Ticket Grid: Standardmäßig einspaltig */
+/* Ticket Grid: einspaltig auf Mobile */
 .ticket-grid {
   display: grid;
-  grid-template-columns: 1fr; 
+  grid-template-columns: 1fr;
   gap: 16px;
 }
 
-/* 2. Tablet & Desktop (Breakpoints hinzufügen) */
+/* Ab Tablet: nebeneinander */
 @media (min-width: 768px) {
   .controls {
-    flex-direction: row; /* Nebeneinander ab Tablet */
+    flex-direction: row;
     align-items: center;
   }
 
@@ -184,23 +203,21 @@ onMounted(fetchTickets);
   }
 
   .ticket-grid {
-    /* Zwei Spalten ab Tablet-Breite */
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
+/* Ab großem Desktop: dynamische Spaltenanzahl */
 @media (min-width: 1200px) {
   .ticket-grid {
-    /* Drei oder mehr Spalten auf großen Monitoren */
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
 }
 
-/* Gemeinsame Card-Styles (gelten für alle Breiten) */
 .ticket-card {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   transition: transform 0.2s ease;
@@ -218,15 +235,17 @@ onMounted(fetchTickets);
   align-items: center;
 }
 
-.status-badge { color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
-
-.card-body { padding: 15px; flex-grow: 1; }
-.card-body h3 { margin: 0 0 10px 0; font-size: 1.1rem; }
-.location { font-size: 0.9rem; color: #555; margin-bottom: 5px; }
-.meta { font-size: 0.75rem; color: #888; }
-.card-footer { padding: 10px 15px; border-top: 1px solid #eee; }
-.detail-btn { 
-  display: block; text-align: center; color: #0e64a6; 
-  text-decoration: none; font-weight: bold; font-size: 0.9rem;
+.status-badge {
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
 }
+
+.card-body        { padding: 15px; flex-grow: 1; }
+.card-body h3     { margin: 0 0 10px 0; font-size: 1.1rem; }
+.location         { font-size: 0.9rem; color: #555; margin-bottom: 5px; }
+.meta             { font-size: 0.75rem; color: #888; }
+.card-footer      { padding: 10px 15px; border-top: 1px solid #eee; }
 </style>

@@ -195,6 +195,7 @@ class OAuthController extends BaseController
             'user'        => $_SESSION['user'],
             'permissions' => [
                 'verwaltung'   => \Kai\MhbBackend20\Auth\Middleware\AuthMiddleware::hasGroup('MHB_BE_MSAL_ADMIN_VERWALTUNG'),
+                'common'   => \Kai\MhbBackend20\Auth\Middleware\AuthMiddleware::hasGroup('MHB_BE_MSAL_ADMIN_COMMON'),
                 'is_processor' => \Kai\MhbBackend20\Auth\Middleware\AuthMiddleware::hasGroup('MHB_BE_MSAL_TICKETPROCESSORS'),
             ],
         ]);

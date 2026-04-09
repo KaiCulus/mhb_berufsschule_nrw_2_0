@@ -21,7 +21,7 @@ import axios from '@/scripts/axios.js'
  */
 
 // Backend-URL: leer in Production (same-origin), gesetzt in Entwicklung via .env
-const BACKEND_URL = import.meta.env.VITE_MHB_BACKEND_URL || '/mhb_2_0/mhb_be'
+const BACKEND_URL = import.meta.env.VITE_MHB_BACKEND_URL || '/mhb/mhb_be'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({

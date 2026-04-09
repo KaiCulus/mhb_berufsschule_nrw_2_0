@@ -52,15 +52,15 @@ return [
             'folder_id' => $_ENV['MHB_MS_GRAPH_FOLDER_ID_VERWALTUNG'] ?? null,
         ],
 
-        // Lehrmittel & Inventar (vorbereitet, noch nicht aktiv)
+        // COMMON (Allgemeine Wissenssammlung) (vorbereitet, noch nicht aktiv)
         // Um dieses Profil zu aktivieren:
-        //   1. .env-Variablen MHB_MS_GRAPH_*_LEHRMITTEL setzen
-        //   2. 'lehrmittel' in GraphSyncController::ROLE_MAPPING eintragen
-        'lehrmittel' => [
-            'name'      => 'Lehrmittel & Inventar',
-            'site_id'   => $_ENV['MHB_MS_GRAPH_SITE_ID_LEHRMITTEL']   ?? null,
-            'drive_id'  => $_ENV['MHB_MS_GRAPH_DRIVE_ID_LEHRMITTEL']  ?? null,
-            'folder_id' => $_ENV['MHB_MS_GRAPH_FOLDER_ID_LEHRMITTEL'] ?? null,
+        //   1. .env-Variablen MHB_MS_GRAPH_*_COMMON setzen
+        //   2. 'common' in GraphSyncController::ROLE_MAPPING eintragen
+        'common' => [
+            'name'      => 'Allgemeine Wissenssammlung',
+            'site_id'   => $_ENV['MHB_MS_GRAPH_SITE_ID_COMMON']   ?? null,
+            'drive_id'  => $_ENV['MHB_MS_GRAPH_DRIVE_ID_COMMON']  ?? null,
+            'folder_id' => $_ENV['MHB_MS_GRAPH_FOLDER_ID_COMMON'] ?? null,
         ],
 
     ],

@@ -104,7 +104,6 @@ class TicketController extends BaseController
         ]);
 
         $ticketId = (int) $this->db->lastInsertId();
-
         // Bestätigung an User + Info an Fachabteilung
         $this->sendInitialNotifications($ticketId, $data, $user, $targetMail);
 
@@ -663,24 +662,20 @@ class TicketController extends BaseController
         $stmt = $this->db->prepare("
             SELECT u.email_encrypted FROM users u
             JOIN ticket_subscriptions s ON u.id = s.user_id
-            WHERE s.ticket_id = :tid
-
-            UNION
-
-            SELECT u.email_encrypted FROM users u
-            JOIN tickets t ON u.id = t.created_by
-            WHERE t.id = :tid
+            WHERE s.ticket_id = :tid1
 
             UNION
 
             SELECT u.email_encrypted FROM users u
             JOIN ticket_room_subscriptions rs ON u.id = rs.user_id
             JOIN tickets t ON rs.room_name = t.room
-            WHERE t.id = :tid AND t.location_type = 'building'
+            WHERE t.id = :tid2 AND t.location_type = 'building'
         ");
 
-        // Named parameter :tid kann für alle drei UNION-Teile wiederverwendet werden
-        $stmt->execute([':tid' => $ticketId]);
+        $stmt->execute([
+            ':tid1' => $ticketId,
+            ':tid2' => $ticketId,
+        ]);
         $encryptedEmails = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         $subject = "Update zu Ticket #{$ticketId}: " . htmlspecialchars($title);

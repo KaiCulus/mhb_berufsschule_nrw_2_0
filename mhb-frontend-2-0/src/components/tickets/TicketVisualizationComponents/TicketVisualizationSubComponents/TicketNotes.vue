@@ -2,29 +2,45 @@
 import { ref } from 'vue';
 import axios from '@/scripts/axios';
 
+/**
+ * TicketNotes — Notizen & Kommentarverlauf
+ *
+ * Zeigt alle Kommentare eines Tickets chronologisch an und erlaubt
+ * das Hinzufügen neuer Notizen. Die Kommentarliste wird vom Elternteil
+ * (TicketDetailsMain) als Prop übergeben — nach dem Speichern einer
+ * neuen Notiz wird 'refresh' emittiert, damit das Elternteil die
+ * Ticket-Details neu lädt.
+ *
+ * Props:
+ *   ticketId — ID des Tickets (für den API-Call)
+ *   comments — Array der bestehenden Kommentare
+ * Emits:
+ *   refresh  — Neuer Kommentar gespeichert, Elternteil soll neu laden
+ */
+
 const props = defineProps({
   ticketId: { type: Number, required: true },
-  comments: { type: Array, default: () => [] }
+  comments: { type: Array, default: () => [] },
 });
 
 const emit = defineEmits(['refresh']);
+
 const newComment = ref('');
 const isSubmitting = ref(false);
 
 const addNote = async () => {
   if (!newComment.value.trim()) return;
-  
+
   isSubmitting.value = true;
   try {
     await axios.post('/api/tickets/comment', {
       ticketId: props.ticketId,
-      comment: newComment.value
-      // isInternal wurde hier entfernt
+      comment:  newComment.value,
     });
     newComment.value = '';
     emit('refresh');
   } catch (error) {
-    alert("Notiz konnte nicht gespeichert werden.");
+    alert('Notiz konnte nicht gespeichert werden.');
   } finally {
     isSubmitting.value = false;
   }
@@ -34,7 +50,7 @@ const addNote = async () => {
 <template>
   <div class="notes-container">
     <h3>📝 Notizen & Verlauf</h3>
-    
+
     <div class="notes-list">
       <div v-for="note in comments" :key="note.id" class="note-item">
         <div class="note-header">
@@ -43,20 +59,20 @@ const addNote = async () => {
         </div>
         <p class="note-text">{{ note.comment }}</p>
       </div>
-      
+
       <div v-if="comments.length === 0" class="no-notes">
         Noch keine Notizen zu diesem Ticket vorhanden.
       </div>
     </div>
 
     <div class="note-input-area">
-      <textarea 
-        v-model="newComment" 
-        placeholder="Neue Notiz hinzufügen..." 
+      <textarea
+        v-model="newComment"
+        placeholder="Neue Notiz hinzufügen..."
         rows="3"
       ></textarea>
-      <button 
-        @click="addNote" 
+      <button
+        @click="addNote"
         :disabled="isSubmitting || !newComment.trim()"
         class="add-note-btn"
       >
@@ -89,7 +105,7 @@ const addNote = async () => {
   background: white;
   padding: 10px;
   border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   border-left: 4px solid #0e64a6;
 }
 
@@ -131,5 +147,8 @@ textarea {
   cursor: pointer;
 }
 
-.add-note-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.add-note-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 </style>

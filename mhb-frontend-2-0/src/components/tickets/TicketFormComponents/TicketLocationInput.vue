@@ -2,24 +2,43 @@
 import { computed } from 'vue';
 import { TICKET_CONFIG } from '@/components/tickets/config/ticketConfig';
 
+/**
+ * TicketLocationInput — Ort des Problems
+ *
+ * Zwei Modi per Toggle-Button:
+ *   'building' — Gebäude aus Dropdown + Freitext-Raumnummer
+ *   'other'    — Freitext-Ortsbeschreibung (wird im 'room'-Feld gespeichert)
+ *
+ * Im Readonly-Modus wird der gespeicherte Ort als Badge dargestellt.
+ *
+ * Raum-Validierung: Beim Tippen wird geprüft ob der Raum im gewählten
+ * Gebäude laut TICKET_CONFIG bekannt ist. Unbekannte Räume zeigen eine
+ * Warnung, blockieren aber nicht das Absenden (Freitext ist erlaubt).
+ *
+ * Props:
+ *   type      — 'building' | 'other'
+ *   building  — Gewähltes Gebäude
+ *   room      — Raumnummer oder Ortsbeschreibung
+ *   isReadonly
+ * Emits:
+ *   update:type, update:building, update:room
+ *
+ * Hinweis: Die lokale `roomsByBuilding`-Konstante ist ein veraltetes Duplikat
+ * und wird nicht verwendet — die Validierung läuft ausschließlich über TICKET_CONFIG.
+ */
+
 const props = defineProps({
-  type: String,
-  building: String,
-  room: String,
-  isReadonly: Boolean
+  type:       String,
+  building:   String,
+  room:       String,
+  isReadonly: Boolean,
 });
+
 const emit = defineEmits(['update:type', 'update:building', 'update:room']);
 
 const buildings = TICKET_CONFIG.buildings;
 
-const roomsByBuilding = {
-  'Hauptgebäude (R)': ['R10', 'R11', 'R15', 'R20'],
-  'Moritz-Fiege Straße (S)': ['S01', 'S12', 'S20'],
-  'Technologiezentrum (T)': ['T100', 'T105'],
-  'Landwirtschaft (L)': ['L01']
-};
-
-// Prüft, ob der Raum valide ist
+/** Warnung wenn der eingegebene Raum im gewählten Gebäude nicht bekannt ist. */
 const isInvalidRoom = computed(() => {
   if (props.isReadonly || props.type !== 'building' || !props.room || !props.building) {
     return false;
@@ -31,6 +50,7 @@ const isInvalidRoom = computed(() => {
 const updateType = (newType) => {
   if (props.isReadonly) return;
   emit('update:type', newType);
+  // Felder zurücksetzen wenn auf "Sonstiger Ort" gewechselt wird
   if (newType === 'other') {
     emit('update:building', '');
     emit('update:room', '');
@@ -39,15 +59,15 @@ const updateType = (newType) => {
 
 const handleRoomInput = (e) => {
   const val = e.target.value;
-  // Wir emittieren den bereinigten Wert für das Gebäude-Mapping
+  // Im Gebäude-Modus: Raumnummer normalisieren (Großbuchstaben, kein Whitespace)
   emit('update:room', props.type === 'building' ? val.toUpperCase().trim() : val);
 };
 </script>
 
 <template>
-<div class="location-container" :class="{ 'readonly': isReadonly }">
+  <div class="location-container" :class="{ 'readonly': isReadonly }">
     <label>Ort des Problems</label>
-    
+
     <div v-if="isReadonly" class="location-display">
       <span v-if="type === 'building'" class="loc-badge">
         🏫 {{ building }} — Raum: {{ room }}
@@ -75,13 +95,13 @@ const handleRoomInput = (e) => {
           </select>
         </div>
         <div class="field-group">
-          <input 
-            type="text" 
-            :value="room" 
-            @input="handleRoomInput" 
-            placeholder="Raumnummer" 
+          <input
+            type="text"
+            :value="room"
+            @input="handleRoomInput"
+            placeholder="Raumnummer"
             :class="{ 'input-error': isInvalidRoom }"
-            required 
+            required
           />
           <small v-if="isInvalidRoom" class="error-text">Raum im gewählten Gebäude nicht bekannt.</small>
         </div>
@@ -89,12 +109,12 @@ const handleRoomInput = (e) => {
 
       <div v-else class="location-fields animate-slide">
         <div class="field-group">
-          <input 
-            type="text" 
-            :value="room" 
-            @input="emit('update:room', $event.target.value)" 
-            placeholder="Wo genau?" 
-            required 
+          <input
+            type="text"
+            :value="room"
+            @input="emit('update:room', $event.target.value)"
+            placeholder="Wo genau?"
+            required
           />
         </div>
       </div>
@@ -110,7 +130,12 @@ const handleRoomInput = (e) => {
   border-radius: 8px;
 }
 
-label { font-size: 0.9rem; font-weight: bold; display: block; margin-bottom: 10px; }
+label {
+  font-size: 0.9rem;
+  font-weight: bold;
+  display: block;
+  margin-bottom: 10px;
+}
 
 .type-toggle {
   display: flex;
@@ -142,7 +167,8 @@ label { font-size: 0.9rem; font-weight: bold; display: block; margin-bottom: 10p
 
 .field-group { flex: 1; }
 
-input, select, .other-input {
+input,
+select {
   width: 100%;
   padding: 10px;
   border: 1px solid #ccc;
@@ -156,20 +182,23 @@ input, select, .other-input {
 
 @keyframes slideIn {
   from { opacity: 0; transform: translateX(-10px); }
-  to { opacity: 1; transform: translateX(0); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 .location-container.readonly { background: transparent; padding: 0; }
+
 .location-display { padding: 5px 0; }
-.loc-badge { 
-  display: inline-block; 
-  padding: 8px 12px; 
-  background: #f0f4f8; 
-  border-radius: 6px; 
+
+.loc-badge {
+  display: inline-block;
+  padding: 8px 12px;
+  background: #f0f4f8;
+  border-radius: 6px;
   color: #2c3e50;
   font-weight: 500;
   border-left: 4px solid #0e64a6;
 }
+
 input.input-error {
   border-color: #e74c3c;
   background-color: #fdf2f2;

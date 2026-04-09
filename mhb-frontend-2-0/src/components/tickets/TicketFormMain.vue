@@ -6,57 +6,78 @@ import TicketLocationInput from '@/components/tickets/TicketFormComponents/Ticke
 import TicketPriorityInfo from '@/components/tickets/TicketFormComponents/TicketPriorityInfo.vue';
 import TicketTitleInput from '@/components/tickets/TicketFormComponents/TicketTitleInput.vue';
 import TicketTypeSelect from '@/components/tickets/TicketFormComponents/TicketTypeSelect.vue';
-const emit =defineEmits(['created']);
+
+/**
+ * TicketFormMain — Neues Ticket erstellen
+ *
+ * Sammelt alle Ticket-Felder über spezialisierte Unterkomponenten.
+ * Das Formular sendet erst wenn alle Pflichtfelder befüllt sind (isFormValid).
+ * Nach erfolgreichem Submit wird das Formular zurückgesetzt und das
+ * 'created'-Event gefeuert, damit die Elternseite das Formular schließen kann.
+ *
+ * Emits:
+ *   created — Ticket wurde erfolgreich angelegt
+ */
+
+const emit = defineEmits(['created']);
+
 const isSubmitting = ref(false);
 const message = ref({ text: '', type: '' });
 
 const ticketData = reactive({
-  title: '',
-  description: '',
-  category: 'it_support',
-  sub_category: '',
-  priority: 'medium',
+  title:         '',
+  description:   '',
+  category:      'it_support',
+  sub_category:  '',
+  priority:      'medium',
   location_type: 'building',
-  building: '',
-  room: ''
+  building:      '',
+  room:          '',
 });
 
-// Validierung: Prüft ob Titel, Beschreibung und ggf. das Freitextfeld befüllt sind
+/**
+ * Formular ist gültig wenn:
+ *   - Titel und Beschreibung befüllt sind
+ *   - Eine Unter-Kategorie gewählt wurde
+ *   - Im Gebäude-Modus: Gebäude UND Raum befüllt
+ *   - Im Sonstiger-Ort-Modus: Ortsbeschreibung befüllt (wird im 'room'-Feld gespeichert)
+ */
 const isFormValid = computed(() => {
-  const hasTitle = ticketData.title.trim().length > 0;
+  const hasTitle       = ticketData.title.trim().length > 0;
   const hasDescription = ticketData.description.trim().length > 0;
   const hasSubCategory = ticketData.sub_category.trim().length > 0;
-const hasLocation = 
-    // Fall A: Im Gebäude -> Gebäude UND Raum müssen befüllt sein
-    (ticketData.location_type === 'building' && 
-     ticketData.building.trim().length > 0 && 
-     ticketData.room.trim().length > 0) || 
-    // Fall B: Sonstiger Ort -> Hier wird nur das 'room' Feld als Ortsbeschreibung genutzt
-    (ticketData.location_type === 'other' && 
-     ticketData.room.trim().length > 0);
+  const hasLocation    =
+    (ticketData.location_type === 'building' &&
+      ticketData.building.trim().length > 0 &&
+      ticketData.room.trim().length > 0) ||
+    (ticketData.location_type === 'other' &&
+      ticketData.room.trim().length > 0);
+
   return hasTitle && hasDescription && hasSubCategory && hasLocation;
 });
 
 const submitTicket = async () => {
   if (!isFormValid.value) return;
+
   isSubmitting.value = true;
   try {
     const response = await axios.post('/api/tickets', ticketData);
-    message.value = { text: 'Ticket erfolgreich erstellt! ID: #' + response.data.ticket_id, type: 'success' };
+    message.value = { text: `Ticket erfolgreich erstellt! ID: #${response.data.ticket_id}`, type: 'success' };
+
     // Formular zurücksetzen
-    setTimeout(() => {
-      emit('created'); 
-    }, 500);
-    Object.assign(ticketData, { 
-      title: '', 
-      description: '', 
-      sub_category: '',
-      building: '', 
-      room: '',
-      category: 'it_support',
-      priority: 'medium',
-      location_type: 'building'
+    Object.assign(ticketData, {
+      title:         '',
+      description:   '',
+      sub_category:  '',
+      building:      '',
+      room:          '',
+      category:      'it_support',
+      priority:      'medium',
+      location_type: 'building',
     });
+
+    // Kurze Verzögerung damit die Erfolgsmeldung sichtbar bleibt
+    setTimeout(() => emit('created'), 500);
   } catch (error) {
     message.value = { text: 'Fehler beim Senden.', type: 'error' };
   } finally {
@@ -68,21 +89,21 @@ const submitTicket = async () => {
 <template>
   <div class="ticket-form-main">
     <h2>Neues Ticket erstellen</h2>
-    
+
     <div v-if="message.text" :class="['alert', message.type]">{{ message.text }}</div>
 
     <form @submit.prevent="submitTicket">
       <TicketTitleInput v-model="ticketData.title" :is-readonly="false" />
 
-      <TicketTypeSelect 
-        v-model:category="ticketData.category" 
+      <TicketTypeSelect
+        v-model:category="ticketData.category"
         v-model:subCategory="ticketData.sub_category"
         :is-readonly="false"
       />
 
       <TicketDescriptionInput v-model="ticketData.description" :is-readonly="false" />
 
-      <TicketLocationInput 
+      <TicketLocationInput
         v-model:type="ticketData.location_type"
         v-model:building="ticketData.building"
         v-model:room="ticketData.room"
@@ -106,12 +127,18 @@ const submitTicket = async () => {
   padding: 20px;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
-.form-section { margin-bottom: 15px; display: flex; flex-direction: column; }
-.alert { padding: 10px; border-radius: 5px; margin-bottom: 15px; }
+
+.alert {
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+}
+
 .success { background: #d4edda; color: #155724; }
-.error { background: #f8d7da; color: #721c24; }
+.error   { background: #f8d7da; color: #721c24; }
+
 .submit-btn {
   width: 100%;
   padding: 12px;
@@ -121,6 +148,13 @@ const submitTicket = async () => {
   border-radius: 8px;
   cursor: pointer;
 }
+
 .submit-btn:disabled { opacity: 0.6; }
-.validation-hint { color: #e67e22; font-size: 0.8rem; margin-top: 5px; text-align: center; }
+
+.validation-hint {
+  color: #e67e22;
+  font-size: 0.8rem;
+  margin-top: 5px;
+  text-align: center;
+}
 </style>

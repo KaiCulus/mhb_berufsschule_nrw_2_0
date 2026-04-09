@@ -125,8 +125,6 @@
 │   │   │   │   └── dashboardpage.vue
 │   │   │   ├── home
 │   │   │   │   └── home.vue
-│   │   │   ├── individualDocumentVisualizationPages
-│   │   │   │   └── unspecificDocumentsPage.vue
 │   │   │   ├── loginpage
 │   │   │   │   └── loginpage.vue
 │   │   │   ├── materialsearchpage
@@ -135,8 +133,10 @@
 │   │   │   │   └── mhbpage.vue
 │   │   │   ├── roomavaiabilitypage
 │   │   │   │   └── roomavaiabilitypage.vue
-│   │   │   └── ticketpage
-│   │   │       └── ticketpage.vue
+│   │   │   ├── ticketpage
+│   │   │   │   └── ticketpage.vue
+│   │   │   └── wissenssammlungPage
+│   │   │       └── wissenssammlungPage.vue
 │   │   ├── router
 │   │   │   └── index.js
 │   │   ├── scripts

@@ -22,6 +22,7 @@ const menuEntries = [
   { name: 'Raumbuchungsübersicht', route: '/rooms'     },
   { name: 'Tickets/Schadensmeldung', route: '/tickets' },
   { name: 'Materialsuche',         route: '/material'  },
+  {name: 'Wissenssammlung',        route: '/wissen'    },
 ];
 
 const isVisible = ref(false);

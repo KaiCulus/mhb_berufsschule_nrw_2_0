@@ -27,7 +27,16 @@ const showTickets = ref(true);
         <div v-show="showFavorites" class="section-content">
           <FavoriteDocumentsDashboard scope="verwaltung" />
         </div>
+        <h2 @click="showFavorites = !showFavorites" class="clickable-header">
+          <span>⭐ Meine Wissensfavoriten</span>
+          <span class="toggle-icon">{{ showFavorites ? '−' : '+' }}</span>
+        </h2>
+        <div v-show="showFavorites" class="section-content">
+          <FavoriteDocumentsDashboard scope="common" />
+        </div>
       </section>
+      
+      
 
       <section class="dashboard-section">
         <h2 @click="showTickets = !showTickets" class="clickable-header">
@@ -38,6 +47,7 @@ const showTickets = ref(true);
           <TicketVisualization mode="personal" />
         </div>
       </section>
+
     </div>
   </div>
 </template>

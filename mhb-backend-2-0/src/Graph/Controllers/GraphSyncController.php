@@ -27,8 +27,7 @@ class GraphSyncController extends BaseController
      */
     private const ROLE_MAPPING = [
         'verwaltung' => 'MHB_BE_MSAL_ADMIN_VERWALTUNG',
-        'paedagogik' => 'MHB_BE_MSAL_ADMIN_PAEDAGOGIK',
-        'it_admin'   => 'MHB_BE_MSAL_ADMIN_IT',
+        'common' => 'MHB_BE_MSAL_ADMIN_COMMON',
     ];
 
     private \PDO $db;

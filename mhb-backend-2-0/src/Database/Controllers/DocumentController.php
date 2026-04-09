@@ -27,6 +27,7 @@ class DocumentController extends BaseController
      */
     private const SCOPE_PERMISSIONS = [
         'admin_verwaltung' => 'MHB_BE_MSAL_ADMIN_VERWALTUNG',
+        'admin_common'     => 'MHB_BE_MSAL_ADMIN_COMMON',
         'verwaltung'       => 'MHB_BE_MSAL_TEACHER_ACCESS_GROUP',
     ];
 
