@@ -1,5 +1,6 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { useAuthStore } from '@/stores/authentification/auth';
 import TicketFormMain from '@/components/tickets/TicketFormMain.vue';
 import TicketVisualization from '@/components/tickets/TicketVisualization.vue';
 
@@ -8,14 +9,23 @@ import TicketVisualization from '@/components/tickets/TicketVisualization.vue';
  *
  * Zentrale Seite für das interne Meldesystem.
  * Neue Tickets werden über ein ein- und ausklappbares Formular erstellt.
- * Darunter werden alle vorhandenen Meldungen als Liste angezeigt.
+ *
+ * Tabs:
+ *   'all'     — Alle aktiven Tickets (für jeden sichtbar)
+ *   'archive' — Archivierte Tickets mit Wiederherstellungs-Option
+ *               (nur für Processors sichtbar)
+ *
+ * Der Archiv-Tab wird nur gerendert wenn der User Processor-Berechtigung hat —
+ * der Backend-Endpunkt prüft dies zusätzlich serverseitig.
  */
 
-const showForm = ref(false);
+const authStore    = useAuthStore();
+const showForm     = ref(false);
+const activeTab    = ref('all');
 
-const toggleForm = () => {
-  showForm.value = !showForm.value;
-};
+const isProcessor = computed(() =>
+  authStore.permissions?.is_processor === true
+);
 </script>
 
 <template>
@@ -23,16 +33,35 @@ const toggleForm = () => {
     <h1>Ticket-System</h1>
 
     <div class="header-section">
+      <!-- Neues Ticket nur im aktiven-Modus anzeigen -->
       <button
-        @click="toggleForm"
+        v-if="activeTab === 'all'"
+        @click="showForm = !showForm"
         :class="['toggle-btn', { 'is-active': showForm }]"
       >
         {{ showForm ? '✖ Schließen' : '➕ Neues Problem melden' }}
       </button>
+      <div v-else />
+
+      <!-- Tab-Umschalter: Archiv nur für Processors -->
+      <div v-if="isProcessor" class="tab-switcher">
+        <button
+          :class="['tab-btn', { 'is-active': activeTab === 'all' }]"
+          @click="activeTab = 'all'; showForm = false"
+        >
+          Aktive Tickets
+        </button>
+        <button
+          :class="['tab-btn', { 'is-active': activeTab === 'archive' }]"
+          @click="activeTab = 'archive'; showForm = false"
+        >
+          🗄️ Archiv
+        </button>
+      </div>
     </div>
 
     <transition name="fade-slide">
-      <div v-if="showForm" class="form-wrapper">
+      <div v-if="showForm && activeTab === 'all'" class="form-wrapper">
         <TicketFormMain @created="showForm = false" />
       </div>
     </transition>
@@ -40,8 +69,8 @@ const toggleForm = () => {
     <hr class="separator" />
 
     <div class="list-section">
-      <h2>Aktuelle Meldungen</h2>
-      <TicketVisualization mode="all" />
+      <h2>{{ activeTab === 'archive' ? 'Archivierte Meldungen' : 'Aktuelle Meldungen' }}</h2>
+      <TicketVisualization :mode="activeTab" />
     </div>
   </div>
 </template>
@@ -58,8 +87,10 @@ const toggleForm = () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
+  gap: 16px;
 }
 
+/* Neues-Ticket-Button */
 .toggle-btn {
   padding: 12px 24px;
   border-radius: 8px;
@@ -69,16 +100,45 @@ const toggleForm = () => {
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
-/* Roter Hintergrund signalisiert "Schließen"-Aktion */
-.toggle-btn.is-active {
-  background-color: #e74c3c;
-}
+.toggle-btn.is-active { background-color: #e74c3c; }
 
 .toggle-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Tab-Umschalter */
+.tab-switcher {
+  display: flex;
+  gap: 8px;
+  background: #f0f3f7;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.tab-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #555;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+
+.tab-btn:hover { background: #dce6f0; }
+
+.tab-btn.is-active {
+  background: white;
+  color: #0e64a6;
+  font-weight: bold;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .form-wrapper {

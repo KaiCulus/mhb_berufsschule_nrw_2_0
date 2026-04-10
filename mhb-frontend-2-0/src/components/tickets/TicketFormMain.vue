@@ -6,6 +6,7 @@ import TicketLocationInput from '@/components/tickets/TicketFormComponents/Ticke
 import TicketPriorityInfo from '@/components/tickets/TicketFormComponents/TicketPriorityInfo.vue';
 import TicketTitleInput from '@/components/tickets/TicketFormComponents/TicketTitleInput.vue';
 import TicketTypeSelect from '@/components/tickets/TicketFormComponents/TicketTypeSelect.vue';
+import TicketImageUpload from '@/components/tickets/TicketFormComponents/Ticketimageupload.vue';
 
 /**
  * TicketFormMain — Neues Ticket erstellen
@@ -15,14 +16,20 @@ import TicketTypeSelect from '@/components/tickets/TicketFormComponents/TicketTy
  * Nach erfolgreichem Submit wird das Formular zurückgesetzt und das
  * 'created'-Event gefeuert, damit die Elternseite das Formular schließen kann.
  *
+ * Bild-Upload:
+ *   Wird vollständig von TicketImageUpload verwaltet. Nach erfolgreichem
+ *   Ticket-Submit werden die Dateien per imageUploadRef.getFiles() abgerufen
+ *   und als Multipart-Request gesendet. Danach imageUploadRef.reset().
+ *
  * Emits:
  *   created — Ticket wurde erfolgreich angelegt
  */
 
 const emit = defineEmits(['created']);
 
-const isSubmitting = ref(false);
-const message = ref({ text: '', type: '' });
+const isSubmitting   = ref(false);
+const message        = ref({ text: '', type: '' });
+const imageUploadRef = ref(null); // Template-Ref auf TicketImageUpload
 
 const ticketData = reactive({
   title:         '',
@@ -60,9 +67,25 @@ const submitTicket = async () => {
   if (!isFormValid.value) return;
 
   isSubmitting.value = true;
+  message.value = { text: '', type: '' };
+
   try {
+    // 1. Ticket anlegen
     const response = await axios.post('/api/tickets', ticketData);
-    message.value = { text: `Ticket erfolgreich erstellt! ID: #${response.data.ticket_id}`, type: 'success' };
+    const ticketId = response.data.ticket_id;
+
+    // 2. Bilder hochladen (optional) — Dateien aus TicketImageUpload abholen
+    const files = imageUploadRef.value?.getFiles() ?? [];
+    if (files.length > 0) {
+      const formData = new FormData();
+      files.forEach((file) => formData.append('images[]', file));
+
+      await axios.post(`/api/tickets/images/${ticketId}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    }
+
+    message.value = { text: `Ticket erfolgreich erstellt! ID: #${ticketId}`, type: 'success' };
 
     // Formular zurücksetzen
     Object.assign(ticketData, {
@@ -75,6 +98,7 @@ const submitTicket = async () => {
       priority:      'medium',
       location_type: 'building',
     });
+    imageUploadRef.value?.reset();
 
     // Kurze Verzögerung damit die Erfolgsmeldung sichtbar bleibt
     setTimeout(() => emit('created'), 500);
@@ -112,10 +136,12 @@ const submitTicket = async () => {
 
       <TicketPriorityInfo v-model="ticketData.priority" :is-readonly="false" />
 
+      <TicketImageUpload ref="imageUploadRef" />
+
       <button type="submit" :disabled="isSubmitting || !isFormValid" class="submit-btn">
         {{ isSubmitting ? 'Wird gesendet...' : 'Ticket abschicken' }}
       </button>
-      <p v-if="!isFormValid" class="validation-hint">Bitte alle Felder ausfüllen.</p>
+      <p v-if="!isFormValid" class="validation-hint">Bitte alle Pflichtfelder ausfüllen.</p>
     </form>
   </div>
 </template>
@@ -147,9 +173,10 @@ const submitTicket = async () => {
   border: none;
   border-radius: 8px;
   cursor: pointer;
+  margin-top: 8px;
 }
 
-.submit-btn:disabled { opacity: 0.6; }
+.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .validation-hint {
   color: #e67e22;

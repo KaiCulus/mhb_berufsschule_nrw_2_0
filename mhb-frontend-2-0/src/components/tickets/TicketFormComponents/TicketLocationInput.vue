@@ -99,7 +99,7 @@ const handleRoomInput = (e) => {
             type="text"
             :value="room"
             @input="handleRoomInput"
-            placeholder="Raumnummer"
+            placeholder="R/S/T/L+RaumNr."
             :class="{ 'input-error': isInvalidRoom }"
             required
           />

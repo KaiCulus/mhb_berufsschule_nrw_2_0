@@ -10,6 +10,7 @@ import TicketTitleInput from '@/components/tickets/TicketFormComponents/TicketTi
 import TicketTypeSelect from '@/components/tickets/TicketFormComponents/TicketTypeSelect.vue';
 import TicketStatusSelect from '@/components/tickets/TicketVisualizationComponents/TicketVisualizationSubComponents/TicketStatusSelect.vue';
 import RoomSubscriptionToggle from '@/components/tickets/TicketVisualizationComponents/TicketVisualizationSubComponents/RoomSubscriptionToggle.vue';
+import TicketImages from '@/components/tickets/TicketVisualizationComponents/TicketVisualizationSubComponents/Ticketimages.vue';
 
 /**
  * TicketDetailsMain — Ticket-Detail-Modal
@@ -180,6 +181,13 @@ const cleanupTickets = async () => {
               v-model="ticket.priority"
               :is-readonly="!ticket.can_edit_status"
               @update:modelValue="updateField('priority', $event)"
+            />
+
+            <TicketImages
+              :ticket-id="ticket.id"
+              :images="ticket.images ?? []"
+              :can-edit="ticket.can_edit_status"
+              @refresh="fetchDetails"
             />
 
             <div v-if="ticket.last_editor_name" class="history-label">

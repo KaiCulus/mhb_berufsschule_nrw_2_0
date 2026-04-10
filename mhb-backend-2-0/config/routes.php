@@ -79,6 +79,10 @@ return [
         'api/tickets/resolve'         => ['POST' => [TicketController::class, 'resolveTicket']],
         'api/tickets/cleanup'         => ['POST' => [TicketController::class, 'cleanupOldTickets']],
 
+        // --- Ticket-Archiv ---------------------------------------------------
+        'api/tickets/archive'         => ['GET'  => [TicketController::class, 'getArchivedTickets']],
+        'api/tickets/restore'         => ['POST' => [TicketController::class, 'restoreTicket']],
+
         // --- Materialien (Basis) ---------------------------------------------
         'api/materials' => ['POST' => [MaterialController::class, 'create']],
     ],
@@ -113,6 +117,19 @@ return [
 
         // GET api/tickets/canDeleteTicket/{ticketId}
         '#^api/tickets/canDeleteTicket/(\d+)$#' => ['GET' => [TicketController::class, 'getCanDeleteTicket']],
+
+        // --- Ticket-Bilder ---------------------------------------------------
+        // POST api/tickets/images/{ticketId}  — Bilder hochladen
+        '#^api/tickets/images/(\d+)$#' => [
+            'POST'   => [TicketController::class, 'uploadImages'],
+            'GET'    => [TicketController::class, 'getImages'],
+        ],
+
+        // DELETE api/tickets/images/delete/{imageId}  — Einzelbild löschen
+        '#^api/tickets/images/delete/(\d+)$#' => ['DELETE' => [TicketController::class, 'deleteImage']],
+
+        // GET api/tickets/images/serve/{imageId}  — Auth-geschützter Bild-Stream
+        '#^api/tickets/images/serve/(\d+)$#'  => ['GET'    => [TicketController::class, 'serveImage']],
 
         // --- Synchronisation -------------------------------------------------
         // POST api/sync/execute/{folderId}

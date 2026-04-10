@@ -14,11 +14,13 @@ use PDO;
  *
  * Verwaltet den gesamten Ticket-Lebenszyklus:
  *   Erstellen → Kommentieren → Statusänderungen → Auflösen → Cleanup
+ *   Bild-Upload → Archivierung → Wiederherstellung
  *
  * Berechtigungsmodell:
  *   - Authentifizierte User:  Tickets erstellen, eigene einsehen, kommentieren
  *   - Ersteller:             Eigenes Ticket bearbeiten und löschen
- *   - Processor-Gruppe:      Alle Tickets bearbeiten, als gelöst markieren, Cleanup
+ *   - Processor-Gruppe:      Alle Tickets bearbeiten, als gelöst markieren,
+ *                            Cleanup, Archiv einsehen, Tickets wiederherstellen
  *
  * Sicherheitshinweis:
  *   User-IDs werden ausschließlich aus der Session gelesen — niemals aus URL-Parametern
@@ -46,13 +48,32 @@ class TicketController extends BaseController
         'ticket_room_subscriptions',
     ];
 
+    /**
+     * Erlaubte MIME-Typen für Bild-Uploads.
+     */
+    private const ALLOWED_IMAGE_TYPES = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+    ];
+
+    /**
+     * Maximale Dateigröße pro Bild (5 MB).
+     */
+    private const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+    /**
+     * Maximale Anzahl an Bildern pro Ticket.
+     */
+    private const MAX_IMAGES_PER_TICKET = 5;
+
     private \PDO $db;
     private TicketMailService $mailService;
     private string $encKey;
 
     public function __construct()
     {
-        $this->db         = DB::getInstance()->getConnection();
+        $this->db          = DB::getInstance()->getConnection();
         $this->mailService = new TicketMailService();
         $this->encKey      = $_ENV['APP_ENCRYPTION_KEY'];
     }
@@ -134,6 +155,7 @@ class TicketController extends BaseController
             SELECT t.*, u.display_name_encrypted AS creator_name_enc
             FROM tickets t
             JOIN users u ON t.created_by = u.id
+            WHERE t.status != 'archived'
             ORDER BY t.created_at DESC
         ");
         $stmt->execute();
@@ -157,31 +179,34 @@ class TicketController extends BaseController
      * @param int $userId URL-Parameter — wird bewusst ignoriert
      */
     public function getByUser(int $userId): void
-{
-    $user = AuthMiddleware::check();
+    {
+        $user = AuthMiddleware::check();
 
-    $stmt = $this->db->prepare("
-        SELECT DISTINCT t.*, u.display_name_encrypted AS creator_name_enc
-        FROM tickets t
-        JOIN users u ON t.created_by = u.id
-        LEFT JOIN ticket_subscriptions s
-               ON t.id = s.ticket_id AND s.user_id = ?
-        LEFT JOIN ticket_room_subscriptions rs
-               ON t.room = rs.room_name AND rs.user_id = ?
-        WHERE t.created_by = ?
-           OR s.user_id IS NOT NULL
-           OR (rs.user_id IS NOT NULL AND t.location_type = 'building')
-        ORDER BY t.updated_at DESC
-    ");
+        $stmt = $this->db->prepare("
+            SELECT DISTINCT t.*, u.display_name_encrypted AS creator_name_enc
+            FROM tickets t
+            JOIN users u ON t.created_by = u.id
+            LEFT JOIN ticket_subscriptions s
+                   ON t.id = s.ticket_id AND s.user_id = ?
+            LEFT JOIN ticket_room_subscriptions rs
+                   ON t.room = rs.room_name AND rs.user_id = ?
+            WHERE t.status != 'archived'
+              AND (
+                t.created_by = ?
+                OR s.user_id IS NOT NULL
+                OR (rs.user_id IS NOT NULL AND t.location_type = 'building')
+              )
+            ORDER BY t.updated_at DESC
+        ");
 
-    // Positionale Parameter (?) statt named (:uid) — PDO erlaubt named params
-    // nicht mehrfach im selben Statement bei manchen MySQL-Treibern
-    $stmt->execute([$user['id'], $user['id'], $user['id']]);
+        // Positionale Parameter (?) statt named (:uid) — PDO erlaubt named params
+        // nicht mehrfach im selben Statement bei manchen MySQL-Treibern
+        $stmt->execute([$user['id'], $user['id'], $user['id']]);
 
-    $this->jsonResponse(
-        $this->decryptResults($stmt->fetchAll(PDO::FETCH_ASSOC), 'creator_name_enc', 'creator_name')
-    );
-}
+        $this->jsonResponse(
+            $this->decryptResults($stmt->fetchAll(PDO::FETCH_ASSOC), 'creator_name_enc', 'creator_name')
+        );
+    }
 
     /**
      * GET api/tickets/detail/{ticketId}
@@ -239,6 +264,9 @@ class TicketController extends BaseController
             'author_name'
         );
 
+        // Bilder laden
+        $ticket['images'] = $this->fetchTicketImages($ticketId);
+
         $this->jsonResponse($ticket);
     }
 
@@ -272,7 +300,7 @@ class TicketController extends BaseController
         $this->db->prepare("INSERT INTO ticket_comments (ticket_id, user_id, comment) VALUES (?, ?, ?)")
                  ->execute([(int) $data['ticketId'], $user['id'], $cleanComment]);
 
-        $authorName = htmlspecialchars($user['name']);
+        $authorName  = htmlspecialchars($user['name']);
         $commentHtml = nl2br(htmlspecialchars($cleanComment));
         $this->notifySubscribers(
             (int) $data['ticketId'],
@@ -340,7 +368,8 @@ class TicketController extends BaseController
      *
      * Löst ein Ticket auf:
      *   - Processor:  Markiert als 'resolved_by_staff' (bleibt 7 Tage erhalten)
-     *   - Ersteller:  Löscht das Ticket sofort
+     *   - Ersteller:  Setzt Status auf 'archived' — Ticket bleibt in der DB,
+     *                 wird aber aus allen aktiven Ansichten herausgefiltert
      *
      * Erwarteter Request-Body:
      *   { "ticketId": 42 }
@@ -359,12 +388,14 @@ class TicketController extends BaseController
             $this->errorResponse('Ticket nicht gefunden.', 404);
         }
 
-        if (AuthMiddleware::hasGroup(self::ROLE_PROCESSOR)) {
+        // Ersteller-Check hat Vorrang — auch ein Processor soll sein eigenes
+        // Ticket direkt archivieren können statt es nur als erledigt zu markieren
+        if ((int) $ticket['created_by'] === $user['id']) {
+            $this->updateTicketStatus($ticketId, 'archived');
+            $this->jsonResponse(['status' => 'archived']);
+        } elseif (AuthMiddleware::hasGroup(self::ROLE_PROCESSOR)) {
             $this->updateTicketStatus($ticketId, 'resolved_by_staff');
             $this->jsonResponse(['status' => 'resolved']);
-        } elseif ((int) $ticket['created_by'] === $user['id']) {
-            $this->db->prepare("DELETE FROM tickets WHERE id = ?")->execute([$ticketId]);
-            $this->jsonResponse(['status' => 'deleted']);
         } else {
             $this->errorResponse('Nicht autorisiert.', 403);
         }
@@ -373,21 +404,22 @@ class TicketController extends BaseController
     /**
      * POST api/tickets/cleanup
      *
-     * Löscht alle Tickets mit Status 'resolved_by_staff' die älter als 7 Tage sind.
-     * Nur für Processors zugänglich.
+     * Setzt alle Tickets mit Status 'resolved_by_staff' die älter als 7 Tage
+     * sind auf 'archived'. Nur für Processors zugänglich.
      */
     public function cleanupOldTickets(): void
     {
         $this->requireGroup(self::ROLE_PROCESSOR);
 
         $stmt = $this->db->prepare("
-            DELETE FROM tickets
+            UPDATE tickets
+            SET status = 'archived', updated_at = NOW()
             WHERE status = 'resolved_by_staff'
               AND updated_at < DATE_SUB(NOW(), INTERVAL 7 DAY)
         ");
         $stmt->execute();
 
-        $this->jsonResponse(['status' => 'success', 'deleted_count' => $stmt->rowCount()]);
+        $this->jsonResponse(['status' => 'success', 'archived_count' => $stmt->rowCount()]);
     }
 
     // =========================================================================
@@ -505,6 +537,293 @@ class TicketController extends BaseController
     }
 
     // =========================================================================
+    // Bild-Upload
+    // =========================================================================
+
+    /**
+     * POST api/tickets/images/{ticketId}
+     *
+     * Lädt ein oder mehrere Bilder zu einem Ticket hoch.
+     * Erlaubte Typen: JPEG, PNG, WEBP. Maximale Größe: 5 MB pro Datei.
+     * Maximal 5 Bilder pro Ticket.
+     *
+     * Nur der Ersteller des Tickets oder Processors dürfen Bilder hochladen.
+     *
+     * @param int $ticketId Ticket-ID aus der URL
+     */
+    public function uploadImages(int $ticketId): void
+    {
+        $user = AuthMiddleware::check();
+
+        // Ticket-Existenz und Berechtigung prüfen
+        $stmtTicket = $this->db->prepare("SELECT created_by FROM tickets WHERE id = ?");
+        $stmtTicket->execute([$ticketId]);
+        $ticket = $stmtTicket->fetch();
+
+        if (!$ticket) {
+            $this->errorResponse('Ticket nicht gefunden.', 404);
+        }
+
+        $isProcessor = AuthMiddleware::hasGroup(self::ROLE_PROCESSOR);
+        if (!$isProcessor && (int) $ticket['created_by'] !== $user['id']) {
+            $this->errorResponse('Keine Berechtigung.', 403);
+        }
+
+        // Aktuelle Bildanzahl prüfen
+        $stmtCount = $this->db->prepare("SELECT COUNT(*) FROM ticket_images WHERE ticket_id = ?");
+        $stmtCount->execute([$ticketId]);
+        $currentCount = (int) $stmtCount->fetchColumn();
+
+        if (!isset($_FILES['images'])) {
+            $this->errorResponse('Keine Bilder übermittelt.', 400);
+        }
+
+        // $_FILES['images'] normalisieren — unterstützt sowohl single als auch multiple uploads
+        $files = $this->normalizeFileArray($_FILES['images']);
+
+        if (($currentCount + count($files)) > self::MAX_IMAGES_PER_TICKET) {
+            $remaining = self::MAX_IMAGES_PER_TICKET - $currentCount;
+            $this->errorResponse("Maximal " . self::MAX_IMAGES_PER_TICKET . " Bilder pro Ticket erlaubt. Noch {$remaining} möglich.", 400);
+        }
+
+        $uploadDir = $_ENV['TICKET_IMAGE_PATH'] ?? '/var/www/uploads/ticket_images/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $uploaded = [];
+
+        foreach ($files as $file) {
+            if ($file['error'] !== UPLOAD_ERR_OK) {
+                $this->errorResponse('Fehler beim Upload einer Datei.', 400);
+            }
+
+            if ($file['size'] > self::MAX_IMAGE_SIZE) {
+                $this->errorResponse('Eine Datei überschreitet die maximale Größe von 5 MB.', 400);
+            }
+
+            // MIME-Typ über finfo prüfen — nicht dem Client-Header vertrauen
+            $finfo    = new \finfo(FILEINFO_MIME_TYPE);
+            $mimeType = $finfo->file($file['tmp_name']);
+
+            if (!in_array($mimeType, self::ALLOWED_IMAGE_TYPES, strict: true)) {
+                $this->errorResponse('Ungültiger Dateityp. Erlaubt: JPEG, PNG, WEBP.', 400);
+            }
+
+            // Sicheren Dateinamen generieren (UUID + Originalerweiterung)
+            $ext      = match ($mimeType) {
+                'image/jpeg' => 'jpg',
+                'image/png'  => 'png',
+                'image/webp' => 'webp',
+            };
+            $filename = bin2hex(random_bytes(16)) . '.' . $ext;
+            $destPath = $uploadDir . $filename;
+
+            if (!move_uploaded_file($file['tmp_name'], $destPath)) {
+                $this->errorResponse('Datei konnte nicht gespeichert werden.', 500);
+            }
+
+            $this->db->prepare("
+                INSERT INTO ticket_images (ticket_id, filename, original_name, uploaded_by)
+                VALUES (?, ?, ?, ?)
+            ")->execute([$ticketId, $filename, $file['name'], $user['id']]);
+
+            $uploaded[] = $filename;
+        }
+
+        $this->jsonResponse(['status' => 'success', 'uploaded' => $uploaded], 201);
+    }
+
+    /**
+     * GET api/tickets/images/{ticketId}
+     *
+     * Gibt alle Bilder eines Tickets als URL-Liste zurück.
+     *
+     * @param int $ticketId Ticket-ID aus der URL
+     */
+    public function getImages(int $ticketId): void
+    {
+        AuthMiddleware::check();
+
+        $this->jsonResponse($this->fetchTicketImages($ticketId));
+    }
+
+    /**
+     * DELETE api/tickets/images/{imageId}
+     *
+     * Löscht ein einzelnes Bild.
+     * Nur der Uploader, der Ticket-Ersteller oder Processors dürfen löschen.
+     *
+     * @param int $imageId Bild-ID aus der URL
+     */
+    public function deleteImage(int $imageId): void
+    {
+        $user = AuthMiddleware::check();
+
+        $stmt = $this->db->prepare("
+            SELECT ti.*, t.created_by AS ticket_creator
+            FROM ticket_images ti
+            JOIN tickets t ON ti.ticket_id = t.id
+            WHERE ti.id = ?
+        ");
+        $stmt->execute([$imageId]);
+        $image = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$image) {
+            $this->errorResponse('Bild nicht gefunden.', 404);
+        }
+
+        $isProcessor     = AuthMiddleware::hasGroup(self::ROLE_PROCESSOR);
+        $isUploader      = (int) $image['uploaded_by'] === $user['id'];
+        $isTicketCreator = (int) $image['ticket_creator'] === $user['id'];
+
+        if (!$isProcessor && !$isUploader && !$isTicketCreator) {
+            $this->errorResponse('Keine Berechtigung.', 403);
+        }
+
+        // Datei vom Dateisystem löschen
+        $uploadDir = $_ENV['TICKET_IMAGE_PATH'] ?? '/var/www/uploads/ticket_images/';
+        $filePath  = $uploadDir . $image['filename'];
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
+
+        $this->db->prepare("DELETE FROM ticket_images WHERE id = ?")->execute([$imageId]);
+
+        $this->jsonResponse(['status' => 'success']);
+    }
+
+    /**
+     * GET api/tickets/images/serve/{imageId}
+     *
+     * Liefert eine Bilddatei auth-geschützt aus dem Dateisystem aus.
+     * Umgeht den Webserver — PHP prüft die Session und streamt die Datei
+     * erst danach per readfile(). So ist kein Direktzugriff auf storage/ nötig.
+     *
+     * HTTP-Caching:
+     *   Setzt Cache-Control und ETag damit der Browser Bilder lokal cached
+     *   und nicht bei jedem Seitenaufruf neu lädt.
+     *
+     * @param int $imageId Bild-ID aus der URL
+     */
+    public function serveImage(int $imageId): void
+    {
+        // Auth zuerst — kein Bild ohne gültige Session
+        AuthMiddleware::check();
+
+        $stmt = $this->db->prepare("
+            SELECT ti.filename, ti.original_name, ti.ticket_id
+            FROM ticket_images ti
+            WHERE ti.id = ?
+        ");
+        $stmt->execute([$imageId]);
+        $image = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$image) {
+            $this->errorResponse('Bild nicht gefunden.', 404);
+        }
+
+        $uploadDir = rtrim($_ENV['TICKET_IMAGE_PATH'] ?? '/var/www/uploads/ticket_images', '/') . '/';
+        $filePath  = $uploadDir . basename($image['filename']); // basename() verhindert Path-Traversal
+
+        if (!file_exists($filePath) || !is_readable($filePath)) {
+            $this->errorResponse('Datei nicht verfügbar.', 404);
+        }
+
+        // MIME-Typ aus der tatsächlichen Datei lesen — nicht aus der DB
+        $finfo    = new \finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($filePath);
+
+        // Sicherheits-Fallback: nur erlaubte Typen ausliefern
+        if (!in_array($mimeType, self::ALLOWED_IMAGE_TYPES, strict: true)) {
+            $this->errorResponse('Ungültiger Dateityp.', 415);
+        }
+
+        $fileSize = filesize($filePath);
+        $etag     = '"' . md5($image['filename'] . $fileSize) . '"';
+        $lastMod  = filemtime($filePath);
+
+        // ETag-basiertes Caching: 304 zurückgeben wenn Client das Bild noch hat
+        if (
+            isset($_SERVER['HTTP_IF_NONE_MATCH']) &&
+            $_SERVER['HTTP_IF_NONE_MATCH'] === $etag
+        ) {
+            http_response_code(304);
+            exit;
+        }
+
+        // Header setzen und Datei streamen
+        header('Content-Type: '        . $mimeType);
+        header('Content-Length: '      . $fileSize);
+        header('Content-Disposition: inline; filename="' . rawurlencode($image['original_name']) . '"');
+        header('ETag: '                . $etag);
+        header('Last-Modified: '       . gmdate('D, d M Y H:i:s', $lastMod) . ' GMT');
+        header('Cache-Control: private, max-age=3600'); // 1 Stunde im Browser cachen
+        header('X-Content-Type-Options: nosniff');
+
+        readfile($filePath);
+        exit;
+    }
+
+    // =========================================================================
+    // Archiv
+    // =========================================================================
+
+    /**
+     * GET api/tickets/archive
+     *
+     * Gibt alle Tickets mit Status 'archived' zurück, absteigend nach updated_at.
+     * Nur für Processors zugänglich.
+     */
+    public function getArchivedTickets(): void
+    {
+        $this->requireGroup(self::ROLE_PROCESSOR);
+
+        $stmt = $this->db->prepare("
+            SELECT t.*, u.display_name_encrypted AS creator_name_enc
+            FROM tickets t
+            JOIN users u ON t.created_by = u.id
+            WHERE t.status = 'archived'
+            ORDER BY t.updated_at DESC
+        ");
+        $stmt->execute();
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $this->jsonResponse(
+            $this->decryptResults($results, 'creator_name_enc', 'creator_name')
+        );
+    }
+
+    /**
+     * POST api/tickets/restore
+     *
+     * Stellt ein archiviertes Ticket wieder her.
+     * Setzt den Status von 'archived' zurück auf 'open'.
+     * Nur für Processors zugänglich.
+     *
+     * Erwarteter Request-Body:
+     *   { "ticketId": 42 }
+     */
+    public function restoreTicket(): void
+    {
+        $this->requireGroup(self::ROLE_PROCESSOR);
+
+        $data     = $this->validateRequest(['ticketId' => 'int']);
+        $ticketId = (int) $data['ticketId'];
+
+        $stmt = $this->db->prepare("SELECT id FROM tickets WHERE id = ? AND status = 'archived'");
+        $stmt->execute([$ticketId]);
+
+        if (!$stmt->fetch()) {
+            $this->errorResponse('Archiviertes Ticket nicht gefunden.', 404);
+        }
+
+        $this->updateTicketStatus($ticketId, 'open');
+
+        $this->jsonResponse(['status' => 'success', 'ticket_id' => $ticketId]);
+    }
+
+    // =========================================================================
     // Private Helpers
     // =========================================================================
 
@@ -534,8 +853,8 @@ class TicketController extends BaseController
             throw new \InvalidArgumentException("Ungültige Tabelle: {$table}");
         }
 
-        $whereClause = implode(' AND ', array_map(fn($k) => "{$k} = ?", array_keys($conditions)));
-        $values      = array_values($conditions);
+        $whereClause  = implode(' AND ', array_map(fn($k) => "{$k} = ?", array_keys($conditions)));
+        $values       = array_values($conditions);
 
         $stmtCheck = $this->db->prepare("SELECT 1 FROM {$table} WHERE {$whereClause}");
         $stmtCheck->execute($values);
@@ -545,7 +864,7 @@ class TicketController extends BaseController
             return 'unsubscribed';
         }
 
-        $cols        = implode(', ', array_keys($conditions));
+        $cols         = implode(', ', array_keys($conditions));
         $placeholders = implode(', ', array_fill(0, count($conditions), '?'));
         $this->db->prepare("INSERT INTO {$table} ({$cols}) VALUES ({$placeholders})")->execute($values);
         return 'subscribed';
@@ -685,5 +1004,70 @@ class TicketController extends BaseController
             $email = Cipher::decrypt($encEmail, $this->encKey);
             $this->mailService->sendNotification($email, $subject, $body);
         }
+    }
+
+    /**
+     * Lädt alle Bilder eines Tickets und gibt sie als Array mit URLs zurück.
+     *
+     * Die URL zeigt auf den auth-geschützten Serve-Endpunkt (serveImage),
+     * nicht direkt auf das Dateisystem — so sind Bilder ohne gültige Session
+     * nicht abrufbar.
+     *
+     * @param int $ticketId Ticket-ID
+     * @return array Array mit Bild-Metadaten und serve-URLs
+     */
+    private function fetchTicketImages(int $ticketId): array
+    {
+        $stmt = $this->db->prepare("
+            SELECT id, filename, original_name, uploaded_at
+            FROM ticket_images
+            WHERE ticket_id = ?
+            ORDER BY uploaded_at ASC
+        ");
+        $stmt->execute([$ticketId]);
+        $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // URL zeigt auf serveImage() — Dateiname wird bewusst nicht mitgegeben,
+        // damit das Frontend keine Direktzugriffe auf storage/ konstruieren kann.
+        $apiBase = rtrim($_ENV['APP_URL'] ?? '', '/');
+
+        foreach ($images as &$image) {
+            $image['url'] = $apiBase . '/api/tickets/images/serve/' . $image['id'];
+            unset($image['filename']); // Dateiname bleibt serverseitig
+        }
+        unset($image);
+
+        return $images;
+    }
+
+    /**
+     * Normalisiert das $_FILES-Array für Einzel- und Mehrfach-Uploads.
+     *
+     * PHP strukturiert $_FILES['images'] bei multiple=true anders als bei single.
+     * Diese Methode vereinheitlicht beide Formate zu einem Array von Datei-Arrays.
+     *
+     * @param array $filesInput $_FILES['images']
+     * @return array Normalisiertes Array von Datei-Einträgen
+     */
+    private function normalizeFileArray(array $filesInput): array
+    {
+        if (!is_array($filesInput['name'])) {
+            // Einzelne Datei
+            return [$filesInput];
+        }
+
+        // Mehrere Dateien: PHP's transponiertes Format umkehren
+        $normalized = [];
+        foreach ($filesInput['name'] as $i => $name) {
+            $normalized[] = [
+                'name'     => $name,
+                'type'     => $filesInput['type'][$i],
+                'tmp_name' => $filesInput['tmp_name'][$i],
+                'error'    => $filesInput['error'][$i],
+                'size'     => $filesInput['size'][$i],
+            ];
+        }
+
+        return $normalized;
     }
 }
