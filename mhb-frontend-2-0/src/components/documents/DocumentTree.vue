@@ -22,11 +22,12 @@ const props = defineProps({
   parentId: String,
   depth: { type: Number, default: 0 },
   rootId: String,
-  inheritedColor: String
+  inheritedColor: String,
+  scope: { type: String, default: null }
 });
 
 const store = useDocumentStore();
-const items = computed(() => store.getTree(props.parentId));
+const items = computed(() => store.getTree(props.parentId, props.scope));
 const openStates = ref({});
 const selectedItem = ref(null);
 const showOptions = ref(false);
@@ -127,6 +128,7 @@ const closeOptions = () => {
         :parent-id="item.ms_id"
         :depth="depth + 1"
         :root-id="rootId"
+        :scope="scope"
         :inherited-color="getStableColor(item, index)"
         class="nested-tree"
       />

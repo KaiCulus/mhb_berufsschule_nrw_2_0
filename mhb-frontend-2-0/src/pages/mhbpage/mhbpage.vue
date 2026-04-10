@@ -50,6 +50,7 @@ onUnmounted(() => {
         parent-id="root"
         :root-id="rootFolderId"
         :depth="0"
+        scope="verwaltung"
       />
     </div>
   </div>

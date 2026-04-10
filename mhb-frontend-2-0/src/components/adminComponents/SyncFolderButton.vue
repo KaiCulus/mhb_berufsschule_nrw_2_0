@@ -1,18 +1,17 @@
 <script setup>
 import { ref } from 'vue';
 import { useAuthStore } from '@/stores/authentification/auth';
+import { useDocumentStore } from '@/stores/documents/documents';
 import axios from '@/scripts/axios.js';
 
 /**
  * SyncFolderButton — Admin-Button für die manuelle Ordnersynchronisation
  *
- * Löst einen Microsoft-Graph-Sync für den angegebenen Scope aus.
- * Wird nur gerendert wenn der eingeloggte User die passende Berechtigung
- * für den Scope hat (geprüft via authStore.permissions[syncType]).
+ * Löst einen Microsoft-Graph-Sync für den angegebenen Scope aus
+ * und lädt anschließend den Dokumentenbaum des Scopes neu.
  *
  * Props:
  *   syncType — Scope-Bezeichner für den Sync-Endpoint und die Berechtigungsprüfung
- *              (z.B. 'verwaltung', 'paedagogik')
  *   label    — Beschriftung des Buttons, default: 'Ordner synchronisieren'
  */
 
@@ -22,12 +21,14 @@ const props = defineProps({
 });
 
 const authStore = useAuthStore();
+const documentStore = useDocumentStore();
 const loading = ref(false);
 
 const startSync = async () => {
   loading.value = true;
   try {
     await axios.post(`/api/sync/execute/${props.syncType}`);
+    await documentStore.refreshDocuments(props.syncType);
     alert(`${props.label} erfolgreich abgeschlossen.`);
   } catch (error) {
     alert('Fehler: ' + (error.response?.data?.error || error.message));

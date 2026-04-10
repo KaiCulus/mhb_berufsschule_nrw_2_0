@@ -17,6 +17,7 @@ import { useAuthStore } from '../authentification/auth';
 export const useDocumentStore = defineStore('documents', {
   state: () => ({
     documents: [],
+    loadedScopes: [],
     favorites: [],
     searchQuery: '',
     searchSelectedIndex: -1,
@@ -29,11 +30,13 @@ export const useDocumentStore = defineStore('documents', {
      * Wird vom DocumentTree für das rekursive Rendering genutzt.
      * @param {string|null} parentId - ms_id des Elternknotens, null → Root
      */
-    getTree: (state) => (parentId) => {
+    getTree: (state) => (parentId, scope = null) => {
       const searchId = parentId ? String(parentId).trim() : 'root';
       return state.documents.filter((d) => {
         const itemParentId = d.parent_id ? String(d.parent_id).trim() : 'root';
-        return itemParentId === searchId;
+        const parentMatch = itemParentId === searchId;
+        const scopeMatch = scope ? d.scope === scope : true;
+        return parentMatch && scopeMatch;
       });
     },
 
@@ -99,16 +102,30 @@ export const useDocumentStore = defineStore('documents', {
      * @param {string} scope - z.B. 'verwaltung'
      */
     async fetchDocuments(scope) {
+      if (this.loadedScopes.includes(scope)) return;
       this.loading = true;
       try {
         const response = await axios.get(`/api/documents/${scope}`);
-        this.documents = response.data.map((doc) => ({ ...doc, scope }));
+        const newDocs = response.data.map((doc) => ({ ...doc, scope }));
+        this.documents = [
+          ...this.documents.filter((d) => d.scope !== scope),
+          ...newDocs,
+        ];
+        this.loadedScopes.push(scope);
         console.log(`${this.documents.length} Dokumente für Scope "${scope}" geladen.`);
       } catch (error) {
         console.error('Fehler beim Laden der Dokumente:', error);
       } finally {
         this.loading = false;
       }
+    },
+
+    /**
+     * Lädt die Dokumente neu. Z.B. nach einem FolderSync
+     */
+    async refreshDocuments(scope) {
+      this.loadedScopes = this.loadedScopes.filter(s => s !== scope);
+      await this.fetchDocuments(scope);
     },
 
     /**

@@ -31,10 +31,9 @@ const displayedFavorites = computed(() => {
 });
 
 onMounted(async () => {
-  if (store.documents.length === 0 && props.scope) {
-    await store.fetchDocuments(props.scope);
+  if (props.scope) {
+    await store.fetchDocuments(props.scope);  // ← Store-Guard verhindert Doppelaufruf
   }
-
   if (store.favorites.length === 0 && authStore.dbId) {
     await store.fetchFavorites();
   }

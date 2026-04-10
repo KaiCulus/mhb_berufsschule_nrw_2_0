@@ -10,7 +10,8 @@ import TicketVisualization from '@/components/tickets/TicketVisualization.vue';
  * Zeigt Verwaltungsfavoriten und eigene Tickets in aufklappbaren Sektionen.
  */
 
-const showFavorites = ref(true);
+const showVerwaltungsFavorites = ref(true);
+const showWissensFavorites = ref(true);
 const showTickets = ref(true);
 </script>
 
@@ -20,24 +21,23 @@ const showTickets = ref(true);
 
     <div class="dashboard-grid">
       <section class="dashboard-section">
-        <h2 @click="showFavorites = !showFavorites" class="clickable-header">
+        <h2 @click="showVerwaltungsFavorites = !showVerwaltungsFavorites" class="clickable-header">
           <span>⭐ Meine Verwaltungsfavoriten</span>
-          <span class="toggle-icon">{{ showFavorites ? '−' : '+' }}</span>
+          <span class="toggle-icon">{{ showVerwaltungsFavorites ? '−' : '+' }}</span>
         </h2>
-        <div v-show="showFavorites" class="section-content">
+        <div v-show="showVerwaltungsFavorites" class="section-content">
           <FavoriteDocumentsDashboard scope="verwaltung" />
         </div>
-        <h2 @click="showFavorites = !showFavorites" class="clickable-header">
+
+        <h2 @click="showWissensFavorites = !showWissensFavorites" class="clickable-header">
           <span>⭐ Meine Wissensfavoriten</span>
-          <span class="toggle-icon">{{ showFavorites ? '−' : '+' }}</span>
+          <span class="toggle-icon">{{ showWissensFavorites ? '−' : '+' }}</span>
         </h2>
-        <div v-show="showFavorites" class="section-content">
+        <div v-show="showWissensFavorites" class="section-content">
           <FavoriteDocumentsDashboard scope="common" />
         </div>
       </section>
       
-      
-
       <section class="dashboard-section">
         <h2 @click="showTickets = !showTickets" class="clickable-header">
           <span>🎫 Meine Tickets</span>
