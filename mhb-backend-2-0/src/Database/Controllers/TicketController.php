@@ -134,7 +134,8 @@ class TicketController extends BaseController
             $this->notifySubscribers(
                 $ticketId,
                 $data['title'],
-                "Ein neues Ticket wurde für den Raum <b>{$room}</b> erstellt, dem du folgst."
+                "Ein neues Ticket wurde für den Raum <b>{$room}</b> erstellt...",
+                $user['id']  // ← Ersteller kriegt schon die Bestätigungsmail
             );
         }
 
@@ -305,7 +306,8 @@ class TicketController extends BaseController
         $this->notifySubscribers(
             (int) $data['ticketId'],
             $ticket['title'],
-            "Neue Notiz von <b>{$authorName}</b>:<br><i>{$commentHtml}</i>"
+            "Neue Notiz von <b>{$authorName}</b>:<br><i>{$commentHtml}</i>",
+            $user['id']  // ← Kommentator nicht benachrichtigen
         );
 
         $this->jsonResponse(['status' => 'success']);
@@ -356,7 +358,8 @@ class TicketController extends BaseController
             $this->notifySubscribers(
                 (int) $data['ticketId'],
                 $ticket['title'],
-                "Status wurde auf <b>'{$statusHtml}'</b> geändert."
+                "Status wurde auf <b>'{$statusHtml}'</b> geändert.",
+                $user['id']  // ← Ändernden User nicht benachrichtigen
             );
         }
 
@@ -976,32 +979,41 @@ class TicketController extends BaseController
      * @param string $title    Ticket-Titel (für den Mail-Betreff)
      * @param string $message  HTML-Nachricht (muss bereits escaped sein)
      */
-    private function notifySubscribers(int $ticketId, string $title, string $message): void
+    private function notifySubscribers(int $ticketId, string $title, string $message, ?int $excludeUserId = null): void
     {
         $stmt = $this->db->prepare("
-            SELECT u.email_encrypted FROM users u
+            SELECT u.id AS user_id, u.email_encrypted FROM users u
             JOIN ticket_subscriptions s ON u.id = s.user_id
             WHERE s.ticket_id = :tid1
 
             UNION
 
-            SELECT u.email_encrypted FROM users u
+            SELECT u.id AS user_id, u.email_encrypted FROM users u
+            JOIN tickets t ON u.id = t.created_by
+            WHERE t.id = :tid2
+
+            UNION
+
+            SELECT u.id AS user_id, u.email_encrypted FROM users u
             JOIN ticket_room_subscriptions rs ON u.id = rs.user_id
             JOIN tickets t ON rs.room_name = t.room
-            WHERE t.id = :tid2 AND t.location_type = 'building'
+            WHERE t.id = :tid3 AND t.location_type = 'building'
         ");
 
         $stmt->execute([
             ':tid1' => $ticketId,
             ':tid2' => $ticketId,
+            ':tid3' => $ticketId,
         ]);
-        $encryptedEmails = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         $subject = "Update zu Ticket #{$ticketId}: " . htmlspecialchars($title);
         $body    = "<div style='font-family:Arial,sans-serif;'>{$message}</div>";
 
-        foreach ($encryptedEmails as $encEmail) {
-            $email = Cipher::decrypt($encEmail, $this->encKey);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            if ($excludeUserId !== null && (int) $row['user_id'] === $excludeUserId) {
+                continue;
+            }
+            $email = Cipher::decrypt($row['email_encrypted'], $this->encKey);
             $this->mailService->sendNotification($email, $subject, $body);
         }
     }

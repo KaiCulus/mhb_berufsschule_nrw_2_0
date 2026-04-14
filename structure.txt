@@ -44,8 +44,37 @@
 │   │           ├── MSFolderSyncService.php
 │   │           ├── RaumbuchungsUebersichtService.php
 │   │           └── TicketMailService.php
+│   ├── storage
+│   │   └── ticket_images
+│   │       └── test.txt
 │   └── structure.txt
 ├── mhb-frontend-2-0
+│   ├── dist
+│   │   ├── assets
+│   │   │   ├── dashboardpage-BIpWmfYd.css
+│   │   │   ├── dashboardpage-DsD8srJj.js
+│   │   │   ├── DocumentSearch-BKrDklkn.js
+│   │   │   ├── DocumentSearch-CsFSs6NC.css
+│   │   │   ├── documents-Zm6RaQKn.js
+│   │   │   ├── home-Cj98Ni4e.js
+│   │   │   ├── index-C1CJft5w.js
+│   │   │   ├── index-Ckw4OV6V.css
+│   │   │   ├── loginpage-zEtqMKpx.js
+│   │   │   ├── materialsearchpage-D6AUFg55.js
+│   │   │   ├── materialsearchpage-MkUbuNiN.css
+│   │   │   ├── mhbpage-BLSwYT73.css
+│   │   │   ├── mhbpage-Uy0dWbzU.js
+│   │   │   ├── roomavaiabilitypage-BGq77a-W.js
+│   │   │   ├── roomavaiabilitypage-Du-ae2BL.css
+│   │   │   ├── ticketpage-BVqJp3Ag.js
+│   │   │   ├── ticketpage-D5NVR4B9.css
+│   │   │   ├── TicketVisualization-A1ACcU3a.css
+│   │   │   ├── TicketVisualization-BgyiwFEm.js
+│   │   │   ├── wissenssammlungPage-CiePbhSS.css
+│   │   │   └── wissenssammlungPage-Lf0JK6lO.js
+│   │   ├── favicon.ico
+│   │   ├── images
+│   │   └── index.html
 │   ├── index.html
 │   ├── jsconfig.json
 │   ├── package.json
@@ -105,6 +134,7 @@
 │   │   │       │   └── ticketConfig.js
 │   │   │       ├── TicketFormComponents
 │   │   │       │   ├── TicketDescriptionInput.vue
+│   │   │       │   ├── Ticketimageupload.vue
 │   │   │       │   ├── TicketLocationInput.vue
 │   │   │       │   ├── TicketPriorityInfo.vue
 │   │   │       │   ├── TicketTitleInput.vue
@@ -112,8 +142,10 @@
 │   │   │       ├── TicketFormMain.vue
 │   │   │       ├── TicketVisualizationComponents
 │   │   │       │   ├── TicketDetailsMain.vue
+│   │   │       │   ├── Ticketrestorebutton.vue
 │   │   │       │   └── TicketVisualizationSubComponents
 │   │   │       │       ├── RoomSubscriptionToggle.vue
+│   │   │       │       ├── Ticketimages.vue
 │   │   │       │       ├── TicketNotes.vue
 │   │   │       │       ├── TicketStatusSelect.vue
 │   │   │       │       ├── TicketSubscribeRoom.vue
@@ -152,4 +184,4 @@
 │   └── vite.config.js
 └── structure.txt
 
-63 directories, 90 files
+68 directories, 117 files
