@@ -213,6 +213,7 @@ const closeOptions = () => {
 
 .name {
   flex-grow: 1;
+  min-width: 0;
   text-decoration: none;
   color: inherit;
   overflow: hidden;

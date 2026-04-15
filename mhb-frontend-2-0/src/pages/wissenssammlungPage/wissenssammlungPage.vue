@@ -4,6 +4,8 @@ import { useDocumentStore } from '@/stores/documents/documents';
 import DocumentTree from '@/components/documents/DocumentTree.vue';
 import SyncFolderButton from '@/components/adminComponents/SyncFolderButton.vue';
 import DocumentSearch from '@/components/documents/DocumentSearch.vue';
+import AnleitungMain from '@/components/anleitung/anleitungMain.vue';
+import Wissenssammlunganleitung from '@/components/anleitung/anleitungsbereiche/wissenssammlunganleitung.vue';
 
 /**
  * Wissenssammlungspage — Allgemeine Wissenssammlung
@@ -35,6 +37,7 @@ onUnmounted(() => {
   <div class="wissenssammlung-container">
     <div class="centered-header">
       <h1>Allgemeine Wissenssammlung</h1>
+      
       <SyncFolderButton
         syncType="common"
         label="Wissenssammlung synchronisieren"
@@ -42,6 +45,13 @@ onUnmounted(() => {
     </div>
 
     <DocumentSearch />
+    <div class="notCentered">
+      <AnleitungMain
+        label="Erklärung: Wissenssammlung"
+      >
+        <Wissenssammlunganleitung /> 
+      </AnleitungMain>
+    </div>
 
     <div v-if="store.loading" class="loader">Lade Dokumente...</div>
 

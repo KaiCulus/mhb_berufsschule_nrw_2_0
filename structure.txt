@@ -94,6 +94,16 @@
 │   │   ├── components
 │   │   │   ├── adminComponents
 │   │   │   │   └── SyncFolderButton.vue
+│   │   │   ├── anleitung
+│   │   │   │   ├── anleitungLinkElement.vue
+│   │   │   │   ├── anleitungMain.vue
+│   │   │   │   └── anleitungsbereiche
+│   │   │   │       ├── dashboardanleitung.vue
+│   │   │   │       ├── materialsucheanleitung.vue
+│   │   │   │       ├── raumbuchunganleitung.vue
+│   │   │   │       ├── ticketanleitung.vue
+│   │   │   │       ├── verwaltungsdokumenteanleitung.vue
+│   │   │   │       └── wissenssammlunganleitung.vue
 │   │   │   ├── documents
 │   │   │   │   ├── documentOptionsMenu
 │   │   │   │   │   ├── DocumentOptionsMain.vue
@@ -184,4 +194,4 @@
 │   └── vite.config.js
 └── structure.txt
 
-68 directories, 117 files
+70 directories, 125 files

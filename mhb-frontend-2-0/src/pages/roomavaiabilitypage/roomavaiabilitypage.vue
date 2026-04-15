@@ -1,4 +1,6 @@
 <script setup>
+import AnleitungMain from '@/components/anleitung/anleitungMain.vue';
+import Raumbuchunganzeigeanleitung from '@/components/anleitung/anleitungsbereiche/raumbuchunganzeigeanleitung.vue';
 import RoomAvaiabilityMain from '@/components/roomavaiability/RoomAvaiabilityMain.vue';
 
 /**
@@ -17,7 +19,11 @@ import RoomAvaiabilityMain from '@/components/roomavaiability/RoomAvaiabilityMai
   <div class="page-container">
     <header class="page-header">
       <h1>🏫 Raumbuchungsübersicht</h1>
-      <p>Hier sehen Sie die aktuelle Belegung der buchbaren Räume.</p>
+      <AnleitungMain
+          label="Erklärung: Raumbuchungsübersicht"
+      >
+          <Raumbuchunganzeigeanleitung />
+      </AnleitungMain>
     </header>
 
     <main>
@@ -40,5 +46,6 @@ import RoomAvaiabilityMain from '@/components/roomavaiability/RoomAvaiabilityMai
 .page-header h1 {
   color: #000;
   font-size: 2rem;
+  margin-bottom: 20px;
 }
 </style>

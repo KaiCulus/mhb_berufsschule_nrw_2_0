@@ -4,6 +4,8 @@ import { useDocumentStore } from '@/stores/documents/documents';
 import DocumentTree from '@/components/documents/DocumentTree.vue';
 import SyncFolderButton from '@/components/adminComponents/SyncFolderButton.vue';
 import DocumentSearch from '@/components/documents/DocumentSearch.vue';
+import AnleitungMain from '@/components/anleitung/anleitungMain.vue';
+import Verwaltungsdokumenteanleitung from '@/components/anleitung/anleitungsbereiche/verwaltungsdokumenteanleitung.vue';
 
 /**
  * mhbpage — Verwaltungsdokumente
@@ -42,6 +44,11 @@ onUnmounted(() => {
     </div>
 
     <DocumentSearch />
+    <AnleitungMain
+        label="Erklärung: MHB (Verwaltungsdokumente)"
+      >
+        <Verwaltungsdokumenteanleitung />
+    </AnleitungMain>
 
     <div v-if="store.loading" class="loader">Lade Dokumente...</div>
 
@@ -62,6 +69,14 @@ onUnmounted(() => {
   max-width: 1400px;
   width: 95%;
   margin: 0 auto;
+  overflow-x: hidden;
+}
+
+@media (max-width: 900px) {
+  .mhb-container {
+    padding: 12px 10px;
+    width: 100%;
+  }
 }
 
 .centered-header {

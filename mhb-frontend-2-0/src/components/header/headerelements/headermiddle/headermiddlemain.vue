@@ -18,7 +18,7 @@ import MenuEntry from './headermiddleSubcomponents/menuEntry.vue';
  */
 const menuEntries = [
   { name: 'Dashboard',             route: '/dashboard' },
-  { name: 'Verwaltungsdokumente',  route: '/mhb'       },
+  { name: 'Verwaltungsdokumente (MHB)',  route: '/mhb'       },
   { name: 'Raumbuchungsübersicht', route: '/rooms'     },
   { name: 'Tickets/Schadensmeldung', route: '/tickets' },
   { name: 'Materialsuche',         route: '/material'  },

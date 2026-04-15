@@ -148,6 +148,20 @@ const clearSearch = () => {
   transition: box-shadow 0.3s ease;
 }
 
+@media (max-width: 900px) {
+  .search-input-wrapper {
+    padding: 8px 14px;
+  }
+
+  .search-icon {
+    margin-right: 8px;
+  }
+
+  .search-input {
+    font-size: 1rem;
+  }
+}
+
 .search-input-wrapper:focus-within {
   box-shadow: 0 4px 20px rgba(14, 100, 166, 0.25);
 }

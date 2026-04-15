@@ -3,6 +3,8 @@ import { ref, computed } from 'vue';
 import { useAuthStore } from '@/stores/authentification/auth';
 import TicketFormMain from '@/components/tickets/TicketFormMain.vue';
 import TicketVisualization from '@/components/tickets/TicketVisualization.vue';
+import AnleitungMain from '@/components/anleitung/anleitungMain.vue';
+import Ticketanleitung from '@/components/anleitung/anleitungsbereiche/ticketanleitung.vue';
 
 /**
  * ticketpage — Ticket-System
@@ -32,6 +34,11 @@ const isProcessor = computed(() =>
   <div class="ticket-page-container">
     <h1>Ticket-System</h1>
 
+    <AnleitungMain
+        label="Erklärung: Ticketsystem"
+    >
+        <Ticketanleitung />
+    </AnleitungMain>
     <div class="header-section">
       <!-- Neues Ticket nur im aktiven-Modus anzeigen -->
       <button
@@ -66,6 +73,7 @@ const isProcessor = computed(() =>
       </div>
     </transition>
 
+    
     <hr class="separator" />
 
     <div class="list-section">

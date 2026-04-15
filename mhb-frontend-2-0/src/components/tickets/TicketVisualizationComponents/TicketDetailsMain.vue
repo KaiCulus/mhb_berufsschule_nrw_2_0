@@ -329,6 +329,13 @@ const cleanupTickets = async () => {
   font-size: 0.85rem;
 }
 
+.close-btn{
+  margin: 10px;
+  margin-left: 30px;
+  min-width: 30px;
+  min-height: 30px;
+}
+
 .room-follow-hint {
   margin-top: -15px; /* Näher an den LocationInput rücken */
   font-size: 0.85rem;

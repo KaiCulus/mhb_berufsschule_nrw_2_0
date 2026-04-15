@@ -3,6 +3,8 @@ import { ref } from 'vue';
 import Materialeingabe from '@/components/materialcomponents/Materialeingabe.vue';
 import Materialsearch from '@/components/materialcomponents/Materialsearch.vue';
 import Materialliste from '@/components/materialcomponents/Materialliste.vue';
+import Materialsucheanleitung from '@/components/anleitung/anleitungsbereiche/materialsucheanleitung.vue';
+import AnleitungMain from '@/components/anleitung/anleitungMain.vue';
 
 /**
  * materialsearchpage — Ressourcen-Finder
@@ -40,6 +42,14 @@ const openEdit = (item) => {
   <div class="page-wrapper">
     <header class="page-header">
       <h1>🛠️ Ressourcen-Finder</h1>
+      <div class="notCentered">
+      <AnleitungMain
+        label="Erklärung: Materialsuche und -Eintragung"
+      >
+        <Materialsucheanleitung />
+      </AnleitungMain>
+      </div>
+      
       <div class="tab-nav">
         <button :class="{ active: activeTab === 'search' }" @click="activeTab = 'search'">🔍 Suchen</button>
         <button :class="{ active: activeTab === 'add' }" @click="activeTab = 'add'">➕ Eintragen</button>
@@ -49,6 +59,7 @@ const openEdit = (item) => {
     <main class="content">
       <div v-if="activeTab === 'search'">
         <Materialsearch ref="searchRef" @edit="openEdit" @deleted="listRef?.refresh()" />
+        
         <Materialliste ref="listRef" @edit="openEdit" />
       </div>
 

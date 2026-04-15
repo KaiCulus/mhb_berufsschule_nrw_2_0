@@ -2,7 +2,9 @@
 import { ref } from 'vue';
 import FavoriteDocumentsDashboard from '@/components/documents/documentsDashboard/FavoriteDocumentsDashboard.vue';
 import TicketVisualization from '@/components/tickets/TicketVisualization.vue';
-
+import Dashboardanleitung from '@/components/anleitung/anleitungsbereiche/dashboardanleitung.vue';
+import AnleitungMain from '@/components/anleitung/anleitungMain.vue';
+import Changelog from '@/components/anleitung/changelog.vue';
 /**
  * dashboardpage
  *
@@ -18,7 +20,11 @@ const showTickets = ref(true);
 <template>
   <div class="dashboard-container">
     <h1>Dashboard</h1>
-
+    <AnleitungMain
+      label="Erklärung: Dashboard"
+    >
+    <Dashboardanleitung />
+    </AnleitungMain>
     <div class="dashboard-grid">
       <section class="dashboard-section">
         <h2 @click="showVerwaltungsFavorites = !showVerwaltungsFavorites" class="clickable-header">
