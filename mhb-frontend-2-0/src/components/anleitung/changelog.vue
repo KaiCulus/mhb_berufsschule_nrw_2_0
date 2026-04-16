@@ -12,6 +12,12 @@
       <li>Aufhübschung der Buttons für Login und Logout</li>
     </ul>
 
+    <h3>16.04.2026</h3>
+    <ul>
+      <li>Ticketbearbeiter werden jetzt bei einem Kommentar/einer Notiz anderer Personen auf ein Ihnen zugeordnetes Ticket benachrichtigt.</li>
+      <li>Der Ticketersteller wird jetzt auch benachrichtigt, wenn der Status durch den Button "Als erledigt markieren" des Ticketbearbeiters geändert wird</li>
+    </ul>
+
   </div>
 </template>
 

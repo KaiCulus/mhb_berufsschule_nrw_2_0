@@ -288,7 +288,7 @@ class TicketController extends BaseController
         $user = AuthMiddleware::check();
         $data = $this->validateRequest(['ticketId' => 'int', 'comment' => 'string']);
 
-        $stmtT = $this->db->prepare("SELECT title FROM tickets WHERE id = ?");
+        $stmtT = $this->db->prepare("SELECT title, assigned_group_mail FROM tickets WHERE id = ?");
         $stmtT->execute([(int) $data['ticketId']]);
         $ticket = $stmtT->fetch();
 
@@ -309,6 +309,17 @@ class TicketController extends BaseController
             "Neue Notiz von <b>{$authorName}</b>:<br><i>{$commentHtml}</i>",
             $user['id']  // ← Kommentator nicht benachrichtigen
         );
+
+        // Zuständige Gruppe benachrichtigen — aber nur wenn der Kommentator
+        // kein Processor ist (sonst schreibt die Gruppe sich selbst an)
+        if (!AuthMiddleware::hasGroup(self::ROLE_PROCESSOR) && !empty($ticket['assigned_group_mail'])) {
+            $title = htmlspecialchars($ticket['title']);
+            $this->mailService->sendNotification(
+                $ticket['assigned_group_mail'],
+                "Neue Notiz zu Ticket #{$data['ticketId']}: {$title}",
+                "<div style='font-family:Arial,sans-serif;'>Neue Notiz von <b>{$authorName}</b>:<br><i>{$commentHtml}</i></div>"
+            );
+        }
 
         $this->jsonResponse(['status' => 'success']);
     }
@@ -383,7 +394,12 @@ class TicketController extends BaseController
         $data = $this->validateRequest(['ticketId' => 'int']);
         $ticketId = (int) $data['ticketId'];
 
-        $stmt = $this->db->prepare("SELECT created_by FROM tickets WHERE id = ?");
+        $stmt = $this->db->prepare("
+            SELECT t.created_by, t.title, u.email_encrypted AS creator_email_enc
+            FROM tickets t
+            JOIN users u ON t.created_by = u.id
+            WHERE t.id = ?
+        ");
         $stmt->execute([$ticketId]);
         $ticket = $stmt->fetch();
 
@@ -398,6 +414,19 @@ class TicketController extends BaseController
             $this->jsonResponse(['status' => 'archived']);
         } elseif (AuthMiddleware::hasGroup(self::ROLE_PROCESSOR)) {
             $this->updateTicketStatus($ticketId, 'resolved_by_staff');
+
+            // Ersteller informieren, dass sein Ticket vom Bearbeiter als erledigt markiert wurde
+            $creatorEmail = Cipher::decrypt($ticket['creator_email_enc'], $this->encKey);
+            $title        = htmlspecialchars($ticket['title']);
+            $this->mailService->sendNotification(
+                $creatorEmail,
+                "Dein Ticket #{$ticketId} wurde bearbeitet",
+                "<div style='font-family:Arial,sans-serif;'>
+                    Dein Ticket '<b>{$title}</b>' wurde vom Bearbeiter als erledigt markiert.
+                    <br><br>Falls du noch Rückfragen hast, kannst du das Ticket weiterhin kommentieren.
+                </div>"
+            );
+
             $this->jsonResponse(['status' => 'resolved']);
         } else {
             $this->errorResponse('Nicht autorisiert.', 403);
