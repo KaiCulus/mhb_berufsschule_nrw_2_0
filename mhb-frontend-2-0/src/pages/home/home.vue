@@ -38,9 +38,9 @@ const goToLogin = () => {
 <template>
   <div v-if="isLoggedIn" class="anleitung-seite">
     <h2 class="anleitung-titel">Anleitung</h2>
-<AnleitungMain
-      label="Änderungen seit Veröffentlichung"
-    >
+    <AnleitungMain
+          label="Änderungen seit Veröffentlichung"
+        >
     <Changelog />
     </AnleitungMain>
     <AnleitungMain label="Dashboard" :initially-open="s === 'dashboard'">
@@ -68,8 +68,8 @@ const goToLogin = () => {
     </AnleitungMain>
   </div>
 
-  <div v-else>
-    <button @click="goToLogin">
+  <div v-else class="login-container">
+    <button @click="goToLogin" class="login-flow-button">
       Zum Loginbereich
     </button>
   </div>
@@ -85,5 +85,34 @@ const goToLogin = () => {
 .anleitung-titel {
   margin-bottom: 1rem;
   font-size: 1.4rem;
+}
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4rem 1rem;
+}
+
+.login-flow-button {
+  padding: 0.85rem 2.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+  background-color: #0e64a6;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(14, 100, 166, 0.35);
+  transition: background-color 0.2s, box-shadow 0.2s, transform 0.1s;
+}
+
+.login-flow-button:hover {
+  background-color: #0a4f87;
+  box-shadow: 0 6px 20px rgba(14, 100, 166, 0.45);
+}
+
+.login-flow-button:active {
+  transform: scale(0.97);
 }
 </style>

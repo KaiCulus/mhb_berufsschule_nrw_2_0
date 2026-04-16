@@ -25,7 +25,31 @@ const logout = async () => {
 </script>
 
 <template>
-  <button @click="logout" :disabled="isLoading">
+  <button @click="logout" :disabled="isLoading" class="login-flow-button">
     {{ isLoading ? 'Lädt...' : 'Abmelden' }}
   </button>
 </template>
+
+<style scoped>
+.login-flow-button {
+  padding: 0.55rem 1.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background-color: #0e64a6;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(14, 100, 166, 0.35);
+  transition: background-color 0.2s, box-shadow 0.2s, transform 0.1s;
+}
+
+.login-flow-button:hover {
+  background-color: #0a4f87;
+  box-shadow: 0 6px 20px rgba(14, 100, 166, 0.45);
+}
+
+.login-flow-button:active {
+  transform: scale(0.97);
+}
+</style>

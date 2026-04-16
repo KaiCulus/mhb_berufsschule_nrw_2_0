@@ -9,6 +9,7 @@
       <li>Die Buttongröße des Buttons zum Schließen der Ticketdetails wurde erhöht.</li>
       <li>Bei der mobilen Ansicht kommt es jetzt nicht mehr dazu, dass Elemente aus dem Bildschirmbereich hinausragen.</li>
       <li>Dieser Bereich mit den Änderungen seit Veröffentlichung wurde ergänzt.</li>
+      <li>Aufhübschung der Buttons für Login und Logout</li>
     </ul>
 
   </div>
