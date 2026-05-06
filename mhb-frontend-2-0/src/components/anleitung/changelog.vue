@@ -18,6 +18,19 @@
       <li>Der Ticketersteller wird jetzt auch benachrichtigt, wenn der Status durch den Button "Als erledigt markieren" des Ticketbearbeiters geändert wird</li>
     </ul>
 
+    <h3>06.05.2026</h3>
+    <ul>
+      <li>
+        Wenn man bei der Raumbuchungsübersicht das Startdatum vor dem Enddatum setzt, kommt kein Alert mehr, sondern es wird lediglich ein Hinweis eingeblendet. Somit kann man in Ruhe die Daten über die Tastatur eingeben.
+      </li>
+      <li>
+        Bei der Materialeingabe, kann man jetzt Links setzen.
+      </li>
+      <li>
+        Bei Beschreibung/Details in der Materialangabe, kann man jetzt mit Shift+Enter Zeilenumbrüche machen.
+      </li>
+    </ul>
+
   </div>
 </template>
 

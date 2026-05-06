@@ -173,6 +173,7 @@ watch(searchQuery, () => {
   color: #636e72;
   margin-top: 10px;
   font-style: italic;
+  white-space: pre-line;
 }
 
 .no-results {

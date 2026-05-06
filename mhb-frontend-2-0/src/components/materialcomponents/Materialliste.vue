@@ -67,6 +67,30 @@ const deleteItem = async (id) => {
 
 onMounted(fetchMaterials);
 defineExpose({ refresh: fetchMaterials });
+
+const escapeHtml = (str) => str
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;');
+
+const renderDescription = (text) => {
+  if (!text) return '';
+  const linkRegex = /\[([^\]]*)\]\((https?:\/\/[^)]*)\)/g;
+  let result = '';
+  let lastIndex = 0;
+  let match;
+  const toHtml = (s) => escapeHtml(s).replace(/\n/g, '<br>');
+  while ((match = linkRegex.exec(text)) !== null) {
+    result += toHtml(text.slice(lastIndex, match.index));
+    const label = escapeHtml(match[1]);
+    const url = match[2].replace(/"/g, '%22');
+    result += `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    lastIndex = match.index + match[0].length;
+  }
+  result += toHtml(text.slice(lastIndex));
+  return result;
+};
 </script>
 
 <template>
@@ -96,9 +120,10 @@ defineExpose({ refresh: fetchMaterials });
           <tr v-for="item in materials" :key="item.id">
             <td class="name-cell">
               <strong>{{ item.name }}</strong>
-              <small v-if="item.description && item.description !== 'Selbsterklärend'">
-                {{ item.description }}
-              </small>
+              <small
+                v-if="item.description && item.description !== 'Selbsterklärend'"
+                v-html="renderDescription(item.description)"
+              ></small>
             </td>
 
             <td><span class="badge">{{ item.quantity }}</span></td>

@@ -31,6 +31,44 @@ const nameInput = ref(null);
 const showSuccess = ref(false);
 const loading = ref(false);
 
+const descriptionRef = ref(null);
+const showLinkInput = ref(false);
+const linkUrl = ref('');
+const linkUrlInput = ref(null);
+let savedSelectionStart = 0;
+let savedSelectionEnd = 0;
+
+const openLinkDialog = () => {
+  const ta = descriptionRef.value;
+  savedSelectionStart = ta.selectionStart;
+  savedSelectionEnd = ta.selectionEnd;
+  linkUrl.value = '';
+  showLinkInput.value = true;
+  nextTick(() => linkUrlInput.value?.focus());
+};
+
+const insertLink = () => {
+  if (!linkUrl.value.trim()) {
+    showLinkInput.value = false;
+    return;
+  }
+  const selectedText = form.description.slice(savedSelectionStart, savedSelectionEnd);
+  const label = selectedText || 'Link';
+  const insertion = `[${label}](${linkUrl.value.trim()})`;
+  form.description =
+    form.description.slice(0, savedSelectionStart) +
+    insertion +
+    form.description.slice(savedSelectionEnd);
+  showLinkInput.value = false;
+  linkUrl.value = '';
+  nextTick(() => {
+    const ta = descriptionRef.value;
+    ta?.focus();
+    const newPos = savedSelectionStart + insertion.length;
+    ta?.setSelectionRange(newPos, newPos);
+  });
+};
+
 const form = reactive({
   name: '',
   description: 'Selbsterklärend',
@@ -147,7 +185,22 @@ const submitForm = async () => {
 
       <div class="field-group full-width">
         <label>Beschreibung / Details</label>
-        <textarea v-model="form.description" rows="2"></textarea>
+        <div class="desc-toolbar">
+          <button type="button" @click="openLinkDialog" class="toolbar-btn" title="Markierten Text als Link einfügen">🔗 Link</button>
+        </div>
+        <textarea ref="descriptionRef" v-model="form.description" rows="2" @keydown.enter.shift.stop></textarea>
+        <div v-if="showLinkInput" class="link-input-row">
+          <input
+            ref="linkUrlInput"
+            v-model="linkUrl"
+            type="url"
+            placeholder="https://..."
+            @keydown.enter.prevent="insertLink"
+            @keydown.escape="showLinkInput = false"
+          />
+          <button type="button" @click="insertLink" class="confirm-link-btn">✓</button>
+          <button type="button" @click="showLinkInput = false" class="cancel-link-btn">✗</button>
+        </div>
       </div>
 
       <div class="field-group full-width">
@@ -286,4 +339,52 @@ textarea {
 
 .fade-enter-from,
 .fade-leave-to     { opacity: 0; }
+
+.desc-toolbar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.toolbar-btn {
+  background: #f1f2f6;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.toolbar-btn:hover { background: #dfe6e9; }
+
+.link-input-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.link-input-row input {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+
+.confirm-link-btn {
+  background: #00b894;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.cancel-link-btn {
+  background: #ff7675;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
 </style>

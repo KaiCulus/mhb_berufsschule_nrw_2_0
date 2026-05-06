@@ -51,29 +51,47 @@
 ├── mhb-frontend-2-0
 │   ├── dist
 │   │   ├── assets
-│   │   │   ├── dashboardpage-BIpWmfYd.css
-│   │   │   ├── dashboardpage-DsD8srJj.js
-│   │   │   ├── DocumentSearch-BKrDklkn.js
-│   │   │   ├── DocumentSearch-CsFSs6NC.css
-│   │   │   ├── documents-Zm6RaQKn.js
-│   │   │   ├── home-Cj98Ni4e.js
-│   │   │   ├── index-C1CJft5w.js
-│   │   │   ├── index-Ckw4OV6V.css
-│   │   │   ├── loginpage-zEtqMKpx.js
-│   │   │   ├── materialsearchpage-D6AUFg55.js
-│   │   │   ├── materialsearchpage-MkUbuNiN.css
-│   │   │   ├── mhbpage-BLSwYT73.css
-│   │   │   ├── mhbpage-Uy0dWbzU.js
-│   │   │   ├── roomavaiabilitypage-BGq77a-W.js
-│   │   │   ├── roomavaiabilitypage-Du-ae2BL.css
-│   │   │   ├── ticketpage-BVqJp3Ag.js
-│   │   │   ├── ticketpage-D5NVR4B9.css
-│   │   │   ├── TicketVisualization-A1ACcU3a.css
-│   │   │   ├── TicketVisualization-BgyiwFEm.js
-│   │   │   ├── wissenssammlungPage-CiePbhSS.css
-│   │   │   └── wissenssammlungPage-Lf0JK6lO.js
+│   │   │   ├── anleitungMain-1DG1Xgxv.js
+│   │   │   ├── anleitungMain-DRmU7Ac1.css
+│   │   │   ├── changelog-BKnRnsTP.css
+│   │   │   ├── changelog.vue_vue_type_style_index_0_scoped_27443c78_lang-CtO8prMg.js
+│   │   │   ├── dashboardpage-CGpvBb8N.js
+│   │   │   ├── dashboardpage-CR6bgLXM.css
+│   │   │   ├── DocumentSearch-9kCviuOp.css
+│   │   │   ├── DocumentSearch-Dv-C9Voz.js
+│   │   │   ├── documents-TkxO_nqf.js
+│   │   │   ├── home-BEmcY6JJ.js
+│   │   │   ├── home-C_451Wd2.css
+│   │   │   ├── index-CfuxEdq8.css
+│   │   │   ├── index-DmeV2Xfp.js
+│   │   │   ├── loginpage-BcBA3OW1.css
+│   │   │   ├── loginpage-CUCKiiQD.js
+│   │   │   ├── materialsearchpage-BsFpAAjf.css
+│   │   │   ├── materialsearchpage-Du71fsxS.js
+│   │   │   ├── materialsucheanleitung-B1-WR92y.js
+│   │   │   ├── materialsucheanleitung-DIfmTDq8.css
+│   │   │   ├── mhbpage-cpy5x8Tf.css
+│   │   │   ├── mhbpage-Dem1lfxZ.js
+│   │   │   ├── raumbuchunganzeigeanleitung-BnKW1brm.css
+│   │   │   ├── raumbuchunganzeigeanleitung-C7acwSML.js
+│   │   │   ├── roomavaiabilitypage-BIcBZTde.js
+│   │   │   ├── roomavaiabilitypage-CviREDgz.css
+│   │   │   ├── ticketanleitung-CDLkpvJL.css
+│   │   │   ├── ticketanleitung-CmzYriIA.js
+│   │   │   ├── ticketpage-BAwoEBpR.js
+│   │   │   ├── ticketpage-BLf12xjU.css
+│   │   │   ├── TicketVisualization-BY7ZobCr.js
+│   │   │   ├── TicketVisualization-q99nQV3p.css
+│   │   │   ├── verwaltungsdokumenteanleitung-B8Ip7u2H.js
+│   │   │   ├── verwaltungsdokumenteanleitung-O6TFes9x.css
+│   │   │   ├── wissenssammlunganleitung-Ccu1BAz6.js
+│   │   │   ├── wissenssammlunganleitung-tn7lj5Cj.css
+│   │   │   ├── wissenssammlungPage-B1vVO4c5.css
+│   │   │   └── wissenssammlungPage-Bhwf5BPV.js
+│   │   ├── assets.tar.gz
 │   │   ├── favicon.ico
 │   │   ├── images
+│   │   │   └── bot_julia.jpg
 │   │   └── index.html
 │   ├── index.html
 │   ├── jsconfig.json
@@ -95,15 +113,15 @@
 │   │   │   ├── adminComponents
 │   │   │   │   └── SyncFolderButton.vue
 │   │   │   ├── anleitung
-│   │   │   │   ├── anleitungLinkElement.vue
 │   │   │   │   ├── anleitungMain.vue
-│   │   │   │   └── anleitungsbereiche
-│   │   │   │       ├── dashboardanleitung.vue
-│   │   │   │       ├── materialsucheanleitung.vue
-│   │   │   │       ├── raumbuchunganleitung.vue
-│   │   │   │       ├── ticketanleitung.vue
-│   │   │   │       ├── verwaltungsdokumenteanleitung.vue
-│   │   │   │       └── wissenssammlunganleitung.vue
+│   │   │   │   ├── anleitungsbereiche
+│   │   │   │   │   ├── dashboardanleitung.vue
+│   │   │   │   │   ├── materialsucheanleitung.vue
+│   │   │   │   │   ├── raumbuchunganzeigeanleitung.vue
+│   │   │   │   │   ├── ticketanleitung.vue
+│   │   │   │   │   ├── verwaltungsdokumenteanleitung.vue
+│   │   │   │   │   └── wissenssammlunganleitung.vue
+│   │   │   │   └── changelog.vue
 │   │   │   ├── documents
 │   │   │   │   ├── documentOptionsMenu
 │   │   │   │   │   ├── DocumentOptionsMain.vue
@@ -194,4 +212,4 @@
 │   └── vite.config.js
 └── structure.txt
 
-70 directories, 125 files
+70 directories, 143 files

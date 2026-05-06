@@ -22,15 +22,17 @@ import RoomAvaiabilityShowCalender from '@/components/roomavaiability/roomavaiab
 
 const bookings  = ref([]);
 const loading   = ref(false);
+const dateError = ref('');
 
 const startDate = ref(new Date().toISOString().split('T')[0]);
 const endDate   = ref(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
 
 const fetchBookings = async () => {
   if (startDate.value > endDate.value) {
-    alert('Das Startdatum muss vor dem Enddatum liegen.');
+    dateError.value = 'Das Startdatum muss vor dem Enddatum liegen.';
     return;
   }
+  dateError.value = '';
 
   loading.value = true;
   try {
@@ -66,6 +68,8 @@ watch([startDate, endDate], fetchBookings);
           <input type="date" v-model="endDate" class="date-field" />
         </div>
       </div>
+
+      <p v-if="dateError" class="date-error">{{ dateError }}</p>
 
       <button @click="fetchBookings" class="refresh-btn" :disabled="loading">
         <span v-if="loading">⏳ Lade...</span>
@@ -140,6 +144,17 @@ watch([startDate, endDate], fetchBookings);
 
 .refresh-btn:hover    { background: #0a4d82; }
 .refresh-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+.date-error {
+  color: #c0392b;
+  background: #fdecea;
+  border: 1px solid #e74c3c;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 8px;
+}
 
 .calendar-grid {
   display: grid;

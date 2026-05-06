@@ -31,28 +31,30 @@ axiosInstance.interceptors.request.use(
   (config) => {
     const authStore = useAuthStore()
     const token = authStore.idToken
-
-    // Token nur setzen wenn vorhanden (Standardfall: null → kein Header)
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
-
     return config
   },
   (error) => Promise.reject(error)
 )
 
-// Response-Interceptor: Globale 401-Behandlung
-// Bei abgelaufener Session → automatisch zur Startseite
+// Response-Interceptor: 401 NUR behandeln wenn der Request nicht /api/me war.
+// Sonst entsteht eine Race-Condition direkt nach dem OAuth-Callback:
+// /api/me wird aufgerufen bevor der Auth-Store das Ergebnis verarbeiten kann,
+// und der Interceptor wirft den User zurück zum Login während er gerade
+// versucht hat einzuloggen.
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const isAuthCheck = error.config?.url?.includes('/api/me')
+
+    if (error.response?.status === 401 && !isAuthCheck) {
       const authStore = useAuthStore()
-      // State lokal zurücksetzen ohne Backend-Logout (Session bereits abgelaufen)
       localStorage.clear()
       authStore.$reset()
-      window.location.href = '/'
+      // BASE_URL respektieren — sonst landen wir auf der Domain-Root statt /mhb/
+      window.location.href = import.meta.env.BASE_URL || '/'
     }
     return Promise.reject(error)
   }

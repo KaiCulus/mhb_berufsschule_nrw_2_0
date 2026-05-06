@@ -18,7 +18,14 @@
     <h3>Tab: Eintragen</h3>
     <ul>
       <li>Pflichtfelder: <strong>Gegenstand</strong> (Name) und <strong>Ort</strong>.</li>
-      <li>Optional: Mengenangabe (Freitext, z. B. <em>3 Stück</em>), Beschreibung und <strong>Ansprechpartner</strong>.</li>
+      <li>
+        Optional: Mengenangabe (Freitext, z. B. <em>3 Stück</em>), Beschreibung und <strong>Ansprechpartner</strong>.
+        <ul>
+          <li>Bei der Beschreibung können Links gesetzt werden, indem man den gewünschten Textabschnitt markiert und dann auf den "Link-Button" klickt.</li>
+          <li>Zeilenumbrüche funktionieren mit der Tastenkombination Shift+Enter</li>
+        </ul>
+      </li>
+      
       <li>Über <strong>„+ Kontakt hinzufügen"</strong> können mehrere Ansprechpartner eingetragen werden.</li>
       <li>Speichern mit dem Button oder <strong>Enter</strong> — nach dem Speichern leuchtet das Formular kurz auf und der Fokus springt zurück ins Namensfeld für schnelle Folgeeinträge.</li>
     </ul>

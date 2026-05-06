@@ -3,9 +3,10 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [vue(), vueDevTools()],
-  base: process.env.NODE_ENV === 'production' ? '/mhb/' : '/',
+  // 'build' = vite build → immer /mhb/, 'serve' = vite dev → /
+  base: command === 'build' ? '/mhb/' : '/',
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) }
   },
@@ -15,4 +16,4 @@ export default defineConfig({
       '/api':   { target: 'https://localhost:443', changeOrigin: true, secure: false },
     }
   }
-})
+}))
