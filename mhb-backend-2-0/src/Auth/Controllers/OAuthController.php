@@ -113,10 +113,13 @@ class OAuthController extends BaseController
             // 4. User in DB anlegen oder aktualisieren (E-Mail & Name werden verschlüsselt)
             $dbId = $this->syncUserWithDatabase($userData);
 
-            // 5. Session befüllen — nur das Minimum, keine Tokens im Session-Store
-            $_SESSION['user']         = $userData;
-            $_SESSION['user']['id']   = $dbId;
-            $_SESSION['user_groups']  = $userData['groups'] ?? [];
+            // 5. Session befüllen
+            $_SESSION['user']        = $userData;
+            $_SESSION['user']['id']  = $dbId;
+            $_SESSION['user_groups'] = $userData['groups'] ?? [];
+
+            session_regenerate_id(true); // Bonus: Session-Fixation-Schutz nach Login
+            session_write_close();       // Daten garantiert persistiert, BEVOR der Browser weitergeleitet wird
 
             header('Location: ' . $_ENV['MHB_FRONTEND_URL'] . '/dashboard');
             exit;

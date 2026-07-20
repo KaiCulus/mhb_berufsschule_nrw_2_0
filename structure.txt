@@ -51,47 +51,46 @@
 ├── mhb-frontend-2-0
 │   ├── dist
 │   │   ├── assets
-│   │   │   ├── anleitungMain-1DG1Xgxv.js
+│   │   │   ├── anleitungMain-BRUS268t.js
 │   │   │   ├── anleitungMain-DRmU7Ac1.css
-│   │   │   ├── changelog-BKnRnsTP.css
-│   │   │   ├── changelog.vue_vue_type_style_index_0_scoped_27443c78_lang-CtO8prMg.js
-│   │   │   ├── dashboardpage-CGpvBb8N.js
+│   │   │   ├── changelog-Dq8BotuC.css
+│   │   │   ├── changelog.vue_vue_type_style_index_0_scoped_defaac93_lang-B21mkDg1.js
 │   │   │   ├── dashboardpage-CR6bgLXM.css
+│   │   │   ├── dashboardpage-_HXJ8WQT.js
 │   │   │   ├── DocumentSearch-9kCviuOp.css
-│   │   │   ├── DocumentSearch-Dv-C9Voz.js
-│   │   │   ├── documents-TkxO_nqf.js
-│   │   │   ├── home-BEmcY6JJ.js
+│   │   │   ├── DocumentSearch-BAtQJo6S.js
+│   │   │   ├── documents-mlLl9oYH.js
 │   │   │   ├── home-C_451Wd2.css
+│   │   │   ├── home-Di263LSz.js
 │   │   │   ├── index-CfuxEdq8.css
-│   │   │   ├── index-DmeV2Xfp.js
-│   │   │   ├── loginpage-BcBA3OW1.css
-│   │   │   ├── loginpage-CUCKiiQD.js
-│   │   │   ├── materialsearchpage-BsFpAAjf.css
-│   │   │   ├── materialsearchpage-Du71fsxS.js
-│   │   │   ├── materialsucheanleitung-B1-WR92y.js
-│   │   │   ├── materialsucheanleitung-DIfmTDq8.css
+│   │   │   ├── index-Dh3w3PIS.js
+│   │   │   ├── loginpage-BDAqOyK7.css
+│   │   │   ├── loginpage-CJezy3Zu.js
+│   │   │   ├── materialsearchpage-lQ-4T3sm.css
+│   │   │   ├── materialsearchpage-Sim8w7iJ.js
+│   │   │   ├── materialsucheanleitung-BTVZdDk5.css
+│   │   │   ├── materialsucheanleitung-gjGHUas0.js
+│   │   │   ├── mhbpage-BmMpv6gv.js
 │   │   │   ├── mhbpage-cpy5x8Tf.css
-│   │   │   ├── mhbpage-Dem1lfxZ.js
 │   │   │   ├── raumbuchunganzeigeanleitung-BnKW1brm.css
-│   │   │   ├── raumbuchunganzeigeanleitung-C7acwSML.js
-│   │   │   ├── roomavaiabilitypage-BIcBZTde.js
-│   │   │   ├── roomavaiabilitypage-CviREDgz.css
+│   │   │   ├── raumbuchunganzeigeanleitung-D3a7_CD1.js
+│   │   │   ├── roomavaiabilitypage-DQFLvyYc.js
+│   │   │   ├── roomavaiabilitypage-krUnQlHG.css
 │   │   │   ├── ticketanleitung-CDLkpvJL.css
-│   │   │   ├── ticketanleitung-CmzYriIA.js
-│   │   │   ├── ticketpage-BAwoEBpR.js
+│   │   │   ├── ticketanleitung-Uel6slsu.js
 │   │   │   ├── ticketpage-BLf12xjU.css
-│   │   │   ├── TicketVisualization-BY7ZobCr.js
+│   │   │   ├── ticketpage-vchTPncI.js
+│   │   │   ├── TicketVisualization-DqKyuAhU.js
 │   │   │   ├── TicketVisualization-q99nQV3p.css
-│   │   │   ├── verwaltungsdokumenteanleitung-B8Ip7u2H.js
+│   │   │   ├── verwaltungsdokumenteanleitung-BaBLOQ5e.js
 │   │   │   ├── verwaltungsdokumenteanleitung-O6TFes9x.css
-│   │   │   ├── wissenssammlunganleitung-Ccu1BAz6.js
+│   │   │   ├── wissenssammlunganleitung-C-wVYbjy.js
 │   │   │   ├── wissenssammlunganleitung-tn7lj5Cj.css
 │   │   │   ├── wissenssammlungPage-B1vVO4c5.css
-│   │   │   └── wissenssammlungPage-Bhwf5BPV.js
+│   │   │   └── wissenssammlungPage-CkevawPK.js
 │   │   ├── assets.tar.gz
 │   │   ├── favicon.ico
 │   │   ├── images
-│   │   │   └── bot_julia.jpg
 │   │   └── index.html
 │   ├── index.html
 │   ├── jsconfig.json
@@ -100,7 +99,6 @@
 │   ├── public
 │   │   ├── favicon.ico
 │   │   └── images
-│   │       └── bot_julia.jpg
 │   ├── README.md
 │   ├── src
 │   │   ├── App.vue
@@ -108,7 +106,8 @@
 │   │   │   ├── images
 │   │   │   │   └── logo
 │   │   │   │       └── logo-tbs1.png
-│   │   │   └── main.css
+│   │   │   ├── main.css
+│   │   │   └── videos
 │   │   ├── components
 │   │   │   ├── adminComponents
 │   │   │   │   └── SyncFolderButton.vue
@@ -212,4 +211,4 @@
 │   └── vite.config.js
 └── structure.txt
 
-70 directories, 143 files
+71 directories, 141 files
