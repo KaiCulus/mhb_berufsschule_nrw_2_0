@@ -25,6 +25,19 @@ class RaumbuchungsUebersichtService
     private GraphClient $graphClient;
     private array $rooms;
 
+    /**
+     * Normalisiert einen Graph-dateTime-String (ohne Z, in UTC) zu echtem ISO 8601 UTC.
+     */
+    private function toUtcIso(?string $dateTime): ?string
+    {
+        if ($dateTime === null) {
+            return null;
+        }
+        // Graph liefert z.B. "2026-04-08T09:30:00.0000000" — ohne Zeitzonen-Suffix
+        return rtrim($dateTime, '0') === '' ? null : preg_replace('/(\.\d+)?$/', '', $dateTime) . 'Z';
+    }
+
+
     public function __construct()
     {
         $this->graphClient = new GraphClient();
@@ -67,8 +80,8 @@ class RaumbuchungsUebersichtService
                     'id'        => $event['id'],
                     'room'      => $roomName,
                     'subject'   => $event['subject']  ?? 'Kein Betreff',
-                    'start'     => $event['start']['dateTime'] ?? null,
-                    'end'       => $event['end']['dateTime']   ?? null,
+                    'start'     => $this->toUtcIso($event['start']['dateTime'] ?? null),
+                    'end'       => $this->toUtcIso($event['end']['dateTime'] ?? null),
                     'organizer' => $event['organizer']['emailAddress']['name'] ?? 'Unbekannt',
                 ];
             }
@@ -97,6 +110,9 @@ class RaumbuchungsUebersichtService
         $endpoint = "/users/{$mail}/calendar/calendarView";
 
         $params = [
+            'headers' => [
+                'Prefer' => 'outlook.timezone="UTC"',
+            ],
             'query' => [
                 'startDateTime' => $start,
                 'endDateTime'   => $end,
@@ -114,4 +130,6 @@ class RaumbuchungsUebersichtService
             return [];
         }
     }
+
+
 }

@@ -43,6 +43,10 @@ dist/
 .env.local
 .env.*.local
 
+# Media
+videos/
+logo/
+
 # Build-Tools
 coverage/
 *.map
