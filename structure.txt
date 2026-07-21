@@ -13,6 +13,16 @@
 │   ├── phpunit.xml
 │   ├── public
 │   │   └── index.php
+│   ├── ressources
+│   │   └── mail
+│   │       └── ticket
+│   │           ├── commentAdded.php
+│   │           ├── createdConfirmation.php
+│   │           ├── createdDepartment.php
+│   │           ├── layout.php
+│   │           ├── resolvedByStaff.php
+│   │           ├── roomTicketCreated.php
+│   │           └── statusChanged.php
 │   ├── src
 │   │   ├── Auth
 │   │   │   ├── Controllers
@@ -33,8 +43,20 @@
 │   │   │   │   ├── DocumentController.php
 │   │   │   │   ├── FavoriteController.php
 │   │   │   │   ├── MaterialController.php
-│   │   │   │   └── TicketController.php
-│   │   │   └── DB.php
+│   │   │   │   ├── Tickets
+│   │   │   │   │   ├── TicketArchiveController.php
+│   │   │   │   │   ├── TicketController.php
+│   │   │   │   │   └── TicketImageController.php
+│   │   │   │   └── UserController.php
+│   │   │   ├── DB.php
+│   │   │   ├── Policies
+│   │   │   │   └── TicketPolicy.php
+│   │   │   └── Services
+│   │   │       └── Tickets
+│   │   │           ├── ImageUploadException.php
+│   │   │           ├── TicketImageService.php
+│   │   │           ├── TicketService.php
+│   │   │           └── TicketSubscriptionService.php
 │   │   └── Graph
 │   │       ├── Controllers
 │   │       │   ├── GraphSyncController.php
@@ -43,7 +65,8 @@
 │   │       └── Services
 │   │           ├── MSFolderSyncService.php
 │   │           ├── RaumbuchungsUebersichtService.php
-│   │           └── TicketMailService.php
+│   │           ├── TicketMailService.php
+│   │           └── TicketNotificationService.php
 │   ├── storage
 │   │   └── ticket_images
 │   │       └── test.txt
@@ -211,4 +234,4 @@
 │   └── vite.config.js
 └── structure.txt
 
-71 directories, 141 files
+78 directories, 157 files

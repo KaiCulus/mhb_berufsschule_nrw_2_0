@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authentification/auth';
 import TicketFormMain from '@/components/tickets/TicketFormMain.vue';
 import TicketVisualization from '@/components/tickets/TicketVisualization.vue';
@@ -24,6 +25,19 @@ import Ticketanleitung from '@/components/anleitung/anleitungsbereiche/ticketanl
 const authStore    = useAuthStore();
 const showForm     = ref(false);
 const activeTab    = ref('all');
+const route  = useRoute();
+const router = useRouter();
+
+const initialTicketId = ref(null);
+
+onMounted(() => {
+  const id = Number(route.query.ticket);
+  if (Number.isInteger(id) && id > 0) {
+    initialTicketId.value = id;
+    // URL aufräumen, damit ein Reload das Modal nicht erneut aufzwingt
+    router.replace({ query: {} });
+  }
+});
 
 const isProcessor = computed(() =>
   authStore.permissions?.is_processor === true
@@ -78,7 +92,7 @@ const isProcessor = computed(() =>
 
     <div class="list-section">
       <h2>{{ activeTab === 'archive' ? 'Archivierte Meldungen' : 'Aktuelle Meldungen' }}</h2>
-      <TicketVisualization :mode="activeTab" />
+      <TicketVisualization :mode="activeTab" :initial-ticket-id="initialTicketId" />
     </div>
   </div>
 </template>

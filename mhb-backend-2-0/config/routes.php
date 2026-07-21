@@ -23,7 +23,10 @@
  */
 
 use Kai\MhbBackend20\Auth\Controllers\OAuthController;
-use Kai\MhbBackend20\Database\Controllers\TicketController;
+use Kai\MhbBackend20\Database\Controllers\Tickets\TicketController;
+use Kai\MhbBackend20\Database\Controllers\Tickets\TicketImageController;
+use Kai\MhbBackend20\Database\Controllers\Tickets\TicketArchiveController;
+use Kai\MhbBackend20\Database\Controllers\UserController;
 use Kai\MhbBackend20\Database\Controllers\DocumentController;
 use Kai\MhbBackend20\Database\Controllers\FavoriteController;
 use Kai\MhbBackend20\Database\Controllers\AliasController;
@@ -47,7 +50,7 @@ return [
         // --- Session / User --------------------------------------------------
         // Gibt den aktuellen User + Berechtigungen zurück (wird beim App-Start geprüft)
         'api/me'           => ['GET' => [OAuthController::class, 'getCurrentUser']],
-        'api/user/profile' => ['GET' => [TicketController::class, 'getCurrentUserProfile']],
+        'api/user/profile' => ['GET' => [UserController::class, 'getProfile']],
 
         // --- Favoriten -------------------------------------------------------
         // Alle Favoriten-Operationen ohne ID in der URL (sicherer als /favorites/{id})
@@ -62,8 +65,8 @@ return [
         'api/aliases/vote' => ['POST' => [AliasController::class, 'toggleVote']],
 
         // --- Raumplanung & Sync ----------------------------------------------
-        'api/rooms/bookings'       => ['GET'  => [RaumbuchungsUebersichtController::class, 'getOverview']],
-        'api/sync/get-permissions' => ['GET'  => [GraphSyncController::class, 'getPermissions']],
+        'api/rooms/bookings'       => ['GET' => [RaumbuchungsUebersichtController::class, 'getOverview']],
+        'api/sync/get-permissions' => ['GET' => [GraphSyncController::class, 'getPermissions']],
 
         // --- Tickets (Basis) -------------------------------------------------
         'api/tickets' => [
@@ -72,19 +75,21 @@ return [
         ],
 
         // --- Ticket-Aktionen (kein URL-Parameter nötig) ----------------------
-        'api/tickets/comment'         => ['POST' => [TicketController::class, 'addComment']],
-        'api/tickets/update-field'    => ['POST' => [TicketController::class, 'updateField']],
-        'api/tickets/subscribe'       => ['POST' => [TicketController::class, 'toggleSubscription']],
-        'api/tickets/subscribe-room'  => ['POST' => [TicketController::class, 'toggleRoomSubscription']],
-        'api/tickets/resolve'         => ['POST' => [TicketController::class, 'resolveTicket']],
-        'api/tickets/cleanup'         => ['POST' => [TicketController::class, 'cleanupOldTickets']],
+        'api/tickets/comment'        => ['POST' => [TicketController::class, 'addComment']],
+        'api/tickets/update-field'   => ['POST' => [TicketController::class, 'updateField']],
+        'api/tickets/subscribe'      => ['POST' => [TicketController::class, 'toggleSubscription']],
+        'api/tickets/subscribe-room' => ['POST' => [TicketController::class, 'toggleRoomSubscription']],
+        'api/tickets/resolve'        => ['POST' => [TicketController::class, 'resolveTicket']],
 
         // --- Ticket-Archiv ---------------------------------------------------
-        'api/tickets/archive'         => ['GET'  => [TicketController::class, 'getArchivedTickets']],
-        'api/tickets/restore'         => ['POST' => [TicketController::class, 'restoreTicket']],
+        'api/tickets/archive' => ['GET'  => [TicketArchiveController::class, 'getArchivedTickets']],
+        'api/tickets/restore' => ['POST' => [TicketArchiveController::class, 'restoreTicket']],
+        'api/tickets/cleanup' => ['POST' => [TicketArchiveController::class, 'cleanupOldTickets']],
 
         // --- Materialien (Basis) ---------------------------------------------
-        'api/materials' => ['POST' => [MaterialController::class, 'create']],
+        'api/materials'        => ['POST' => [MaterialController::class, 'create']],
+        // Kein URL-Parameter → gehört in den schnellen statischen Lookup
+        'api/materials/search' => ['GET'  => [MaterialController::class, 'search']],
     ],
 
     // =========================================================================
@@ -112,33 +117,30 @@ return [
         // GET api/tickets/detail/{ticketId}
         '#^api/tickets/detail/(\d+)$#' => ['GET' => [TicketController::class, 'getDetail']],
 
-        // GET api/tickets/subscribe-room/{roomId}
+        // GET api/tickets/subscribe-room/{userId}
         '#^api/tickets/subscribe-room/(\d+)$#' => ['GET' => [TicketController::class, 'getRoomSubscriptions']],
 
         // GET api/tickets/canDeleteTicket/{ticketId}
         '#^api/tickets/canDeleteTicket/(\d+)$#' => ['GET' => [TicketController::class, 'getCanDeleteTicket']],
 
         // --- Ticket-Bilder ---------------------------------------------------
-        // POST api/tickets/images/{ticketId}  — Bilder hochladen
+        // POST/GET api/tickets/images/{ticketId}
         '#^api/tickets/images/(\d+)$#' => [
-            'POST'   => [TicketController::class, 'uploadImages'],
-            'GET'    => [TicketController::class, 'getImages'],
+            'POST' => [TicketImageController::class, 'uploadImages'],
+            'GET'  => [TicketImageController::class, 'getImages'],
         ],
 
-        // DELETE api/tickets/images/delete/{imageId}  — Einzelbild löschen
-        '#^api/tickets/images/delete/(\d+)$#' => ['DELETE' => [TicketController::class, 'deleteImage']],
+        // DELETE api/tickets/images/delete/{imageId}
+        '#^api/tickets/images/delete/(\d+)$#' => ['DELETE' => [TicketImageController::class, 'deleteImage']],
 
         // GET api/tickets/images/serve/{imageId}  — Auth-geschützter Bild-Stream
-        '#^api/tickets/images/serve/(\d+)$#'  => ['GET'    => [TicketController::class, 'serveImage']],
+        '#^api/tickets/images/serve/(\d+)$#' => ['GET' => [TicketImageController::class, 'serveImage']],
 
         // --- Synchronisation -------------------------------------------------
         // POST api/sync/execute/{folderId}
         '#^api/sync/execute/([^/]+)$#' => ['POST' => [GraphSyncController::class, 'executeSync']],
 
         // --- Materialien -----------------------------------------------------
-        // GET  api/materials/search
-        '#^api/materials/search$#' => ['GET' => [MaterialController::class, 'search']],
-
         // POST api/materials/update/{id}
         '#^api/materials/update/(\d+)$#' => ['POST' => [MaterialController::class, 'update']],
 

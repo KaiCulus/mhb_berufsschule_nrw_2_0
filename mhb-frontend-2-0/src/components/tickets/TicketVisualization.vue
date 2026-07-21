@@ -29,6 +29,11 @@ const props = defineProps({
     default: 'all',
     validator: (value) => ['all', 'personal', 'archive'].includes(value),
   },
+  /** Ticket das nach dem Laden automatisch geöffnet wird (E-Mail-Deep-Link). */
+  initialTicketId: {
+    type: Number,
+    default: null,
+  },
 });
 
 const authStore        = useAuthStore();
@@ -111,7 +116,14 @@ const onRestoreError = (message) => {
   restoreMessage.value = { text: message, type: 'error' };
 };
 
-onMounted(fetchTickets);
+onMounted(async () => {
+  await fetchTickets();
+
+  // Deep-Link: Modal erst öffnen wenn die Liste da ist
+  if (props.initialTicketId) {
+    selectedTicketId.value = props.initialTicketId;
+  }
+});
 
 // Neu laden wenn der Tab-Modus wechselt (z.B. all → archive)
 watch(() => props.mode, fetchTickets);

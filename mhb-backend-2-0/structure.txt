@@ -7,15 +7,21 @@
 ├── config
 │   ├── graph.php
 │   ├── microsoft_keys.json
-│   ├── oauth.php
 │   └── routes.php
 ├── phpunit.xml
 ├── public
 │   └── index.php
+├── ressources
+│   └── mail
+│       └── ticket
+│           ├── commentAdded.php
+│           ├── createdConfirmation.php
+│           ├── createdDepartment.php
+│           ├── layout.php
+│           ├── resolvedByStaff.php
+│           ├── roomTicketCreated.php
+│           └── statusChanged.php
 ├── src
-│   ├── Api
-│   │   └── Controllers
-│   │       └── TestController.php
 │   ├── Auth
 │   │   ├── Controllers
 │   │   │   └── OAuthController.php
@@ -34,9 +40,21 @@
 │   │   │   ├── AliasController.php
 │   │   │   ├── DocumentController.php
 │   │   │   ├── FavoriteController.php
-│   │   │   └── TicketController.php
+│   │   │   ├── MaterialController.php
+│   │   │   ├── Tickets
+│   │   │   │   ├── TicketArchiveController.php
+│   │   │   │   ├── TicketController.php
+│   │   │   │   └── TicketImageController.php
+│   │   │   └── UserController.php
 │   │   ├── DB.php
-│   │   └── Repositories
+│   │   ├── Policies
+│   │   │   └── TicketPolicy.php
+│   │   └── Services
+│   │       └── Tickets
+│   │           ├── ImageUploadException.php
+│   │           ├── TicketImageService.php
+│   │           ├── TicketService.php
+│   │           └── TicketSubscriptionService.php
 │   └── Graph
 │       ├── Controllers
 │       │   ├── GraphSyncController.php
@@ -45,7 +63,11 @@
 │       └── Services
 │           ├── MSFolderSyncService.php
 │           ├── RaumbuchungsUebersichtService.php
-│           └── TicketMailService.php
+│           ├── TicketMailService.php
+│           └── TicketNotificationService.php
+├── storage
+│   └── ticket_images
+│       └── test.txt
 └── structure.txt
 
-20 directories, 29 files
+26 directories, 45 files
